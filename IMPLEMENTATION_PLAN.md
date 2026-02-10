@@ -6,288 +6,151 @@
 # Implementation Plan
 
 **Last Updated**: 2026-02-10
-**Current Version**: v0.0.4 (v1 complete, v2+ in progress)
+**Current Version**: v0.0.4
 
-This document tracks remaining implementation work for the ai-server and ai-client components. For detailed specifications, see `client/specs/*.md` and `server/specs/*.md`.
+v1 (Aider/OpenAI API) is complete and tested on hardware. v2+ (Claude Code/Anthropic API, version management, analytics) has documentation foundations done; core implementation remains.
 
 ---
 
 ## Current Status
 
-### ✅ v1 Implementation - COMPLETE
+### v1 Implementation - COMPLETE
 
-**Scope**: Aider integration (OpenAI API)
+All 8 scripts delivered (server: 4, client: 3 + env.template). 48 tests passing (20 server, 28 client). Full spec compliance verified. Critical `OLLAMA_API_BASE` bug fixed in v0.0.4 (see "Lessons Learned" below).
 
-- **Scripts**: All 8 spec-required scripts implemented and tested
-  - Server: `install.sh`, `uninstall.sh`, `test.sh`, `warm-models.sh`
-  - Client: `install.sh`, `uninstall.sh`, `test.sh`, `config/env.template`
-- **Testing**: Hardware testing complete (20 server tests + 28 client tests, all passing)
-- **Documentation**: README.md, SETUP.md complete for both components
-- **Spec Compliance**: Full compliance verified via 4-pass exhaustive audit
+### v2+ Implementation - IN PROGRESS
 
-**Critical Bug Fixed (v0.0.4)**:
-- `OLLAMA_API_BASE` incorrectly included `/v1` suffix, breaking Aider's access to Ollama native endpoints
-- Root cause: Aider/LiteLLM uses both OpenAI-compatible endpoints (`/v1/*`) and Ollama native endpoints (`/api/*`)
-- Fix: Separated `OLLAMA_API_BASE` (no suffix) from `OPENAI_API_BASE` (with `/v1` suffix)
-- Lesson: End-to-end integration tests are mandatory; API endpoint tests alone are insufficient
-
-### 🚧 v2+ Implementation - IN PROGRESS (7/22 items complete)
-
-**Scope**: Claude Code integration (Anthropic API), version management, analytics
-
-**Completed (Phase 1 - Foundations)**:
-- ✅ H1-1: Client README.md corrected (removed premature v2+ feature claims)
-- ✅ H1-2: Server SCRIPTS.md updated with `/v1/messages` test requirements
-- ✅ H1-5: Anthropic env vars added to `client/config/env.template`
-- ✅ H2-6: Client SCRIPTS.md updated with v2+ test requirements
-- ✅ H3-4: Server SETUP.md documents Anthropic API
-- ✅ H4-1: Internal documentation fixes (stale URL examples)
-- ✅ H4-2: Server hostname default spec updated to match implementation
-
-**Remaining Work**: See "v2+ Implementation Tasks" section below
+Phase 1 (documentation foundations) complete: 7/22 items done. Specs updated for Anthropic API, env.template extended, README/SCRIPTS/SETUP docs prepared. **15 items remain** across 3 phases of implementation.
 
 ---
 
-## v2+ Implementation Tasks
+## Remaining Tasks
 
-### Phase 2: Core Implementation (4 items)
+### Phase 2: Core Implementation (6 items, parallelizable)
 
-#### H1-3: Add /v1/messages tests to server/scripts/test.sh
-- **Status**: ⬜ TODO
-- **Priority**: H1 (critical - validates Anthropic API surface)
-- **What**: Add 4-6 tests for `POST /v1/messages` endpoint (non-streaming, streaming SSE, system prompts, error handling)
-- **Effort**: Medium (~80-120 lines)
-- **Dependencies**: H1-2 (spec complete)
-- **Bundle with**: H4-4 (fix `show_progress` function while modifying test.sh)
+| ID | Task | Priority | Effort | Target Files | Dependencies |
+|----|------|----------|--------|-------------|-------------|
+| H1-3 | Add Anthropic `/v1/messages` tests to server test.sh (4-6 tests: non-streaming, streaming SSE, system prompts, error handling). Bump `TOTAL_TESTS` from 20 to ~25-26. Add `--skip-anthropic-tests` flag. | H1 | Medium | `server/scripts/test.sh` | None (H1-2 spec done) |
+| H4-4 | Fix `show_progress()` never called in server test.sh. Add calls before each test; `CURRENT_TEST` currently stuck at 0. | H4 | Small | `server/scripts/test.sh` | None |
+| H1-4 | Add optional Claude Code setup to client install.sh. Prompt user, create `claude-ollama` shell alias with marker comments for clean removal. | H1 | Medium | `client/scripts/install.sh` | None (H1-5 env done) |
+| H1-6 | Sync embedded env template in install.sh (lines 311-319) with canonical `env.template` -- add missing Anthropic variable comments (lines 9-12 of template). | H1 | Trivial | `client/scripts/install.sh` | None |
+| H2-1 | Create `check-compatibility.sh`. Detect Claude Code + Ollama versions, check compatibility matrix, report status with exit codes 0/1/2/3. | H2 | Medium | New: `client/scripts/check-compatibility.sh` | None |
+| H2-2 | Create `pin-versions.sh`. Detect versions, pin via npm/brew, create `~/.ai-client/.version-lock`. | H2 | Medium | New: `client/scripts/pin-versions.sh` | None |
 
-#### H1-4: Add Claude Code integration to client/scripts/install.sh
-- **Status**: ⬜ TODO
-- **Priority**: H1 (critical - primary v2+ entry point)
-- **What**: Optional Claude Code setup section; prompts user, creates `claude-ollama` shell alias with marker comments
-- **Effort**: Medium (~60-80 lines)
-- **Dependencies**: H1-5 (complete)
-- **Bundle with**: H1-6 (sync embedded env template)
+**Bundling**: H1-3 + H4-4 (same file). H1-4 + H1-6 (same file).
 
-#### H1-6: Sync install.sh embedded env template with canonical template
-- **Status**: ⬜ TODO
-- **Priority**: H1 (medium - curl-pipe install produces incomplete env file)
-- **What**: Copy Anthropic variable comments from `env.template` to embedded template in `install.sh`
-- **Effort**: Trivial (~4 lines)
-- **Dependencies**: H1-5 (complete)
-- **Bundle with**: H1-4
+**Specs**: H2-1 -> `client/specs/VERSION_MANAGEMENT.md` lines 66-131. H2-2 -> same spec lines 133-178.
 
-#### H2-1: Create client/scripts/check-compatibility.sh
-- **Status**: ⬜ TODO
-- **Priority**: H2 (important - enables safe Claude Code updates)
-- **What**: Detects Claude Code + Ollama versions, checks compatibility matrix, reports status
-- **Effort**: Medium (~100-150 lines)
-- **Dependencies**: None
-- **Spec**: `client/specs/VERSION_MANAGEMENT.md` lines 66-131
-- **Auto-resolves**: H4-3 (ANALYTICS_README.md stale reference)
+### Phase 3: Dependent Implementation (3 items, sequential)
 
-#### H2-2: Create client/scripts/pin-versions.sh
-- **Status**: ⬜ TODO
-- **Priority**: H2 (important - enables version stability)
-- **What**: Detects versions, pins them (npm/brew), creates `~/.ai-client/.version-lock`
-- **Effort**: Medium (~80-120 lines)
-- **Dependencies**: None
-- **Spec**: `client/specs/VERSION_MANAGEMENT.md` lines 133-178
+| ID | Task | Priority | Effort | Target Files | Dependencies |
+|----|------|----------|--------|-------------|-------------|
+| H2-3 | Create `downgrade-claude.sh`. Read `.version-lock`, downgrade Claude Code to recorded version via npm/brew. | H2 | Small-Med | New: `client/scripts/downgrade-claude.sh` | H2-2 (lock file format) |
+| H2-4 | Add v2+ cleanup to client uninstall.sh. Remove `claude-ollama` alias markers from shell profile. | H2 | Small | `client/scripts/uninstall.sh` | H1-4 (must know marker format) |
+| H2-5 | Add v2+ tests to client test.sh (8-10 tests: Claude Code binary, alias, `/v1/messages` connectivity, version scripts, `.version-lock` format). Add `--skip-claude`, `--v1-only`, `--v2-only` flags. | H2 | Medium | `client/scripts/test.sh` | H1-3, H1-4, H2-1, H2-2, H2-3 |
 
-### Phase 3: Dependent Implementation (3 items)
+**Spec**: H2-3 -> `client/specs/VERSION_MANAGEMENT.md` lines 180-226.
 
-#### H2-3: Create client/scripts/downgrade-claude.sh
-- **Status**: ⬜ TODO
-- **Priority**: H2 (important - recovery from breaking updates)
-- **What**: Reads `.version-lock`, downgrades Claude Code to recorded version
-- **Effort**: Small-medium (~60-100 lines)
-- **Dependencies**: H2-2 (requires .version-lock file format)
-- **Spec**: `client/specs/VERSION_MANAGEMENT.md` lines 180-226
+### Phase 4: Validation and Polish (6 items)
 
-#### H2-4: Add v2+ cleanup to client/scripts/uninstall.sh
-- **Status**: ⬜ TODO
-- **Priority**: H2 (must reverse H1-4)
-- **What**: Remove `claude-ollama` alias markers from shell profile
-- **Effort**: Small (~15-25 lines)
-- **Dependencies**: H1-4 (must know what to reverse)
+| ID | Task | Priority | Effort | Target Files | Dependencies |
+|----|------|----------|--------|-------------|-------------|
+| H3-1 | Fix analytics bugs: (a) `compare-analytics.sh` lines 88-91 divide-by-zero -- no zero check on `ITER1`/`ITER2` before division; (b) `loop-with-analytics.sh` line 268 cache hit rate formula uses `total_input` denominator, spec requires `cache_creation + cache_read`. | H3 | Medium | `compare-analytics.sh`, `loop-with-analytics.sh` | None |
+| H3-6 | Implement decision matrix output per `client/specs/ANALYTICS.md` lines 474-485. Neither analytics script outputs this. | H3 | Medium | `loop-with-analytics.sh`, `compare-analytics.sh` | None |
+| H3-2 | Hardware testing: run all tests with `--verbose` on Apple Silicon server, manual Claude Code + Ollama validation, version management script testing. | H3 | Large | Manual | All H1 + H2 items |
+| H3-3 | Update `server/README.md`: new test count, Anthropic test sample output, `--skip-anthropic-tests` flag docs. | H3 | Trivial | `server/README.md` | H1-3, H3-2 |
+| H3-5 | Update `client/SETUP.md`: Claude Code integration section, version management quick-start, analytics overview. | H3 | Small | `client/SETUP.md` | H1-4, H2-1, H2-2, H2-3 |
+| H4-3 | Auto-resolved when H2-1 is created (stale reference in `ANALYTICS_README.md`). | H4 | None | N/A | H2-1 |
 
-#### H2-5: Add v2+ tests to client/scripts/test.sh
-- **Status**: ⬜ TODO
-- **Priority**: H2 (validates all v2+ functionality)
-- **What**: 8-10 new tests (Claude Code binary, alias, `/v1/messages` connectivity, version scripts, .version-lock format)
-- **Effort**: Medium (~150-200 lines)
-- **Dependencies**: H2-6 (spec complete), H1-3, H1-4, H2-1, H2-2, H2-3
-- **Flags**: Add `--skip-claude`, `--v1-only`, `--v2-only`
-
-### Phase 4: Validation and Polish (5 items)
-
-#### H3-1: Fix analytics bugs and implement missing spec features
-- **Status**: ⬜ TODO
-- **Priority**: H3 (nice-to-have - analytics partially working)
-- **What**:
-  1. Fix divide-by-zero in `loop-with-analytics.sh` (line 494) and `compare-analytics.sh` (lines 88-104)
-  2. Implement decision matrix output per `client/specs/ANALYTICS.md` lines 474-485
-  3. Fix per-iteration cache hit rate formula (line 268) - should be `cache_read * 100 / (cache_creation + cache_read)`
-- **Effort**: Medium (bug fixes small, decision matrix requires new logic)
-- **Dependencies**: None
-- **Bundle with**: H3-6
-
-#### H3-2: Hardware testing for v2+ features
-- **Status**: ⬜ TODO
-- **Priority**: H3 (required before v2+ release)
-- **What**:
-  1. Run `server/scripts/test.sh --verbose` (with Anthropic tests)
-  2. Run `client/scripts/test.sh --verbose` (with v2+ tests)
-  3. Manual: `claude-ollama --model <model> -p "Hello"`
-  4. Test version management scripts
-- **Effort**: Large (requires hardware access)
-- **Dependencies**: All H1 and H2 items complete
-
-#### H3-3: Update server/README.md to document Anthropic API testing
-- **Status**: ⬜ TODO
-- **Priority**: H3 (documentation polish)
-- **What**: Add sample Anthropic test output, new test count, `--skip-anthropic-tests` flag docs
-- **Effort**: Trivial
-- **Dependencies**: H1-3, H3-2
-
-#### H3-5: Update client/SETUP.md to document v2+ features
-- **Status**: ⬜ TODO
-- **Priority**: H3 (documentation gap)
-- **What**: Add Claude Code integration section, version management quick-start, analytics overview
-- **Effort**: Small
-- **Dependencies**: H1-4, H2-1, H2-2, H2-3
-
-#### H3-6: Fix per-iteration cache hit rate formula
-- **Status**: ⬜ TODO (bundled with H3-1)
-- **Priority**: H3 (correctness issue)
-- **What**: Change formula from `cache_read * 100 / total_input` to `cache_read * 100 / (cache_creation + cache_read)`
-- **Effort**: Trivial
-- **Bundle with**: H3-1
-
-#### H4-4: Fix server test.sh show_progress function never called
-- **Status**: ⬜ TODO (bundled with H1-3)
-- **Priority**: H4 (cosmetic - tests work, but progress not shown)
-- **What**: Add `show_progress` calls before each test
-- **Effort**: Small (~20 function calls)
-- **Bundle with**: H1-3
+**Bundling**: H3-1 + H3-6 (same files, related analytics work).
 
 ---
 
 ## Dependency Graph
 
 ```
-Phase 1 (COMPLETE):
-H1-1, H1-2, H1-5, H2-6, H3-4, H4-1, H4-2 ──── ✅ ALL DONE
+Phase 2 (parallelizable):
+  H1-3 + H4-4 ─── no blockers
+  H1-4 + H1-6 ─── no blockers
+  H2-1 ─────────── no blockers
+  H2-2 ─────────── no blockers
 
-Phase 2 (Core Implementation):
-H1-3 + H4-4 ──── depends on H1-2 ✅
-H1-4 + H1-6 ──── depends on H1-5 ✅
-H2-1 ──────────── standalone
-H2-2 ──────────── standalone
+Phase 3 (sequential):
+  H2-3 ─────────── depends on H2-2
+  H2-4 ─────────── depends on H1-4
+  H2-5 ─────────── depends on H1-3, H1-4, H2-1, H2-2, H2-3
 
-Phase 3 (Dependent Implementation):
-H2-3 ──────────── depends on H2-2
-H2-4 ──────────── depends on H1-4
-H2-5 ──────────── depends on H2-6 ✅, H1-3, H1-4, H2-1, H2-2, H2-3
-
-Phase 4 (Validation and Polish):
-H3-1 + H3-6 ──── standalone
-H3-2 ──────────── depends on all H1 + H2
-H3-3 ──────────── depends on H1-3, H3-2
-H3-5 ──────────── depends on H1-4, H2-1, H2-2, H2-3
+Phase 4 (polish):
+  H3-1 + H3-6 ─── no blockers (can start anytime)
+  H3-2 ─────────── depends on ALL Phase 2 + Phase 3
+  H3-3 ─────────── depends on H1-3, H3-2
+  H3-5 ─────────── depends on H1-4, H2-1, H2-2, H2-3
+  H4-3 ─────────── auto-resolved by H2-1
 ```
 
 ## Recommended Execution Order
 
-**Phase 2**: (partially parallelizable)
-1. H1-3 + H4-4 — Server Anthropic tests + progress fixes
-2. H1-4 + H1-6 — Client Claude Code install + template sync
-3. H2-1 — check-compatibility.sh (parallel with 1-2)
-4. H2-2 — pin-versions.sh (parallel with 1-2)
+**Batch 1** (parallel, no blockers):
+1. H1-3 + H4-4 -- Server Anthropic tests + progress fix
+2. H1-4 + H1-6 -- Client Claude Code install + template sync
+3. H2-1 -- check-compatibility.sh
+4. H2-2 -- pin-versions.sh
+5. H3-1 + H3-6 -- Analytics bug fixes + decision matrix
 
-**Phase 3**: (sequential)
-5. H2-3 — downgrade-claude.sh (after H2-2)
-6. H2-4 — Uninstall v2+ cleanup (after H1-4)
-7. H2-5 — Client v2+ tests (after all scripts exist)
+**Batch 2** (after Batch 1):
+6. H2-3 -- downgrade-claude.sh (needs H2-2)
+7. H2-4 -- Uninstall v2+ cleanup (needs H1-4)
 
-**Phase 4**: (polish)
-8. H3-1 + H3-6 — Analytics fixes
-9. H3-2 — Hardware testing (after all H1/H2 complete)
-10. H3-3 — Server README update (after H3-2)
-11. H3-5 — Client SETUP update (after scripts exist)
+**Batch 3** (after Batch 2):
+8. H2-5 -- Client v2+ tests (needs all scripts to exist)
+
+**Batch 4** (after Batch 3):
+9. H3-2 -- Hardware testing
+10. H3-3 -- Server README update
+11. H3-5 -- Client SETUP update
 
 ---
 
 ## Effort Summary
 
-**Total remaining**: 15 items across 3 phases
-
-| Priority | Item | Effort | Files |
-|----------|------|--------|-------|
-| H1-3 | Server Anthropic tests | Medium | `server/scripts/test.sh` |
-| H1-4 | Client Claude install | Medium | `client/scripts/install.sh` |
-| H1-6 | Template sync | Trivial | `client/scripts/install.sh` |
-| H2-1 | check-compatibility.sh | Medium | New file |
-| H2-2 | pin-versions.sh | Medium | New file |
-| H2-3 | downgrade-claude.sh | Small-medium | New file |
-| H2-4 | Uninstall v2+ | Small | `client/scripts/uninstall.sh` |
-| H2-5 | Client v2+ tests | Medium | `client/scripts/test.sh` |
-| H3-1 | Analytics fixes | Medium | `loop-with-analytics.sh`, `compare-analytics.sh` |
-| H3-2 | Hardware testing | Large | Manual testing |
-| H3-3 | Server README | Trivial | `server/README.md` |
-| H3-5 | Client SETUP | Small | `client/SETUP.md` |
-| H3-6 | Cache formula fix | Trivial | Bundled with H3-1 |
-| H4-4 | show_progress fix | Small | Bundled with H1-3 |
+| Category | Items | Effort |
+|----------|-------|--------|
+| Server test.sh (Anthropic tests + progress fix) | H1-3, H4-4 | Medium |
+| Client install.sh (Claude Code + template sync) | H1-4, H1-6 | Medium |
+| Version management (3 new scripts) | H2-1, H2-2, H2-3 | Medium-Large |
+| Client uninstall.sh (v2+ cleanup) | H2-4 | Small |
+| Client test.sh (v2+ tests) | H2-5 | Medium |
+| Analytics fixes + decision matrix | H3-1, H3-6 | Medium |
+| Hardware testing | H3-2 | Large |
+| Documentation updates | H3-3, H3-5 | Small |
 
 **New files**: 3 (`check-compatibility.sh`, `pin-versions.sh`, `downgrade-claude.sh`)
-**Modified files**: ~10 existing files
-**Total estimated effort**: 5-7 days focused development + hardware testing
+**Modified files**: ~8 existing files
+**Estimated total**: 5-7 focused development days + hardware testing session
 
 ---
 
 ## Implementation Constraints
 
-These constraints apply to ALL implementation work:
-
-1. **Security**: No public internet exposure. Tailscale-only. No built-in auth.
+1. **Security**: Tailscale-only network. No public exposure. No built-in auth.
 2. **API contract**: `client/specs/API_CONTRACT.md` is the single source of truth for server-client interface.
-3. **Independence**: Server and client remain independent except via the API contract.
-4. **Idempotency**: All scripts must be safe to re-run without breaking existing setup.
-5. **No stubs**: Implement completely or not at all. No TODO/FIXME/HACK markers in production code.
-6. **macOS only**: Server requires Apple Silicon. Client requires macOS 14+ Sonoma.
-7. **Aider is the v1 interface**: But env var setup ensures any OpenAI-compatible tool works.
-8. **Claude Code integration is OPTIONAL**: Always prompt for user consent. Anthropic cloud is the default; Ollama is an alternative, not a replacement.
-9. **curl-pipe install support**: Client install.sh must work when executed via `curl | bash`.
+3. **Idempotency**: All scripts must be safe to re-run without side effects.
+4. **No stubs**: Implement completely or not at all. No TODO/FIXME/HACK in production code.
+5. **Claude Code integration is optional**: Always prompt for user consent. Anthropic cloud is default; Ollama is an alternative.
+6. **curl-pipe install**: Client `install.sh` must work when executed via `curl | bash`.
 
 ---
 
-## Critical Lessons Learned (v0.0.3 Bug)
+## Lessons Learned (v0.0.4)
 
-**Context**: All 47 automated tests passed, but first real Aider usage failed immediately.
-
-**Root Cause**: `OLLAMA_API_BASE` set to `http://hostname:11434/v1` caused Aider/LiteLLM to construct invalid URLs like `http://hostname:11434/v1/api/show` when accessing Ollama native endpoints.
-
-**Why Tests Missed It**:
-- Tests validated OpenAI endpoints (`/v1/models`, `/v1/chat/completions`) ✅
-- Tests validated Aider binary installation ✅
-- Tests validated environment variables were set ✅
-- Tests did NOT validate end-to-end tool usage with real prompts ❌
-
-**Lesson**: Component tests are insufficient. **End-to-end integration tests with actual tools are mandatory**, not just API endpoint validation with curl.
-
-**Applied Fix**: Added Test 26 to `client/scripts/test.sh` - non-interactive Aider invocation that validates the complete integration chain.
-
-**Technical Detail**: Ollama serves two API surfaces:
-1. OpenAI-compatible: `/v1/chat/completions`, `/v1/models` (requires `/v1` prefix)
-2. Ollama native: `/api/show`, `/api/tags`, `/api/chat` (requires NO prefix)
-
-Tools like Aider/LiteLLM use BOTH. Solution: Separate `OLLAMA_API_BASE` (no suffix) from `OPENAI_API_BASE` (with `/v1` suffix).
+All 48 automated tests passed, but first real Aider usage failed. Root cause: `OLLAMA_API_BASE` included `/v1` suffix, breaking Ollama native endpoints (`/api/*`). Fix: separate `OLLAMA_API_BASE` (no suffix) from `OPENAI_API_BASE` (with `/v1`). Lesson: end-to-end integration tests with actual tools are mandatory.
 
 ---
 
 ## Spec Baseline
 
-All implementation must comply with specifications in:
-- `server/specs/*.md` (7 files: ARCHITECTURE, FILES, FUNCTIONALITIES, INTERFACES, REQUIREMENTS, SCRIPTS, SECURITY, ANTHROPIC_COMPATIBILITY)
-- `client/specs/*.md` (6 files: ANALYTICS, API_CONTRACT, ARCHITECTURE, CLAUDE_CODE, FILES, FUNCTIONALITIES, REQUIREMENTS, SCRIPTS, VERSION_MANAGEMENT)
+All work must comply with:
+- `server/specs/*.md` (8 files including ANTHROPIC_COMPATIBILITY)
+- `client/specs/*.md` (9 files including ANALYTICS, CLAUDE_CODE, VERSION_MANAGEMENT)
 
-Specs are the authoritative source. When implementation deviates from specs, implementation must be corrected unless there is a compelling reason to update the spec instead.
+Specs are authoritative. Implementation deviations must be corrected unless there is a compelling reason to update the spec.
