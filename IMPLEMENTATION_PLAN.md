@@ -319,9 +319,11 @@ This ordering is optimal because: (a) the trivial file is first to unblock downs
 
 ## Priority 6 -- Integration Testing
 
-**Status**: BLOCKED (requires Priorities 1-5)
-**Dependencies**: All implementation priorities
+**Status**: AWAITING HARDWARE
+**Dependencies**: All implementation priorities (1-5 COMPLETE)
 **Blocks**: Priority 7
+
+**Note**: Integration testing cannot be performed in the Linux sandbox environment. This requires actual macOS hardware with Apple Silicon and Tailscale to verify the server-client integration. All implementation code is complete and ready for testing on real hardware.
 
 **Spec refs**:
 - `client/specs/API_CONTRACT.md` lines 17-26: supported endpoints
