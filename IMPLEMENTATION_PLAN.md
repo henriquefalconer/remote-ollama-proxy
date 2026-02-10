@@ -1333,12 +1333,12 @@ H4-1 (plan /v1 URL fix)        ──── standalone
 **Phase 0: Trivial Fixes (immediate, parallelizable)** ✅ COMPLETE
 0a. ✅ H4-1 -- Fix stale /v1 URL in this plan file (trivial, internal consistency)
 
-**Phase 1: Foundations (parallelizable)**
-1. H1-1 -- Fix client README (trivial, immediate user-facing improvement)
-2. H1-2 -- Update server SCRIPTS.md spec (unblocks H1-3)
-3. H1-5 -- Add Anthropic vars to env.template (trivial, unblocks H1-4)
-4. H2-6 -- Update client SCRIPTS.md spec (unblocks H2-5)
-5. H3-4 -- Update server SETUP.md with Anthropic API docs (standalone)
+**Phase 1: Foundations (parallelizable)** ✅ COMPLETE
+1. ✅ H1-1 -- Fix client README (trivial, immediate user-facing improvement)
+2. ✅ H1-2 -- Update server SCRIPTS.md spec (unblocks H1-3)
+3. ✅ H1-5 -- Add Anthropic vars to env.template (trivial, unblocks H1-4)
+4. ✅ H2-6 -- Update client SCRIPTS.md spec (unblocks H2-5)
+5. ✅ H3-4 -- Update server SETUP.md with Anthropic API docs (standalone)
 
 **Phase 2: Core Implementation (partially parallelizable)**
 6. H1-3 -- Server /v1/messages tests (depends on H1-2)
