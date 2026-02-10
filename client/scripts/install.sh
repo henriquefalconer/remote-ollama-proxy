@@ -95,54 +95,53 @@ if ! command -v brew &> /dev/null; then
 fi
 info "✓ Homebrew found: $(brew --version | head -n1)"
 
-# Step 4: Check/install Python 3.13 (preferred for Aider compatibility)
-info "Checking for Python 3.13 (recommended for Aider)..."
+# Step 4: Check/install Python 3.12 (required for Aider compatibility)
+info "Checking for Python 3.12 (required for Aider)..."
 
-# Python 3.13 provides the best compatibility with Aider's dependencies
-# Python 3.14+ may have issues with older packages like numpy 1.24.x
+# Python 3.12 is required because Aider depends on numpy==1.24.3
+# numpy 1.24.3 has NO pre-built wheels for Python 3.13+ (verified via PyPI)
+# Python 3.10-3.12 all have numpy 1.24.3 wheels available
 PYTHON_PATH=""
 PYTHON_VERSION=""
 
-# Check for Python 3.13 specifically (via Homebrew)
-PYTHON313_PATH="/opt/homebrew/opt/python@3.13/libexec/bin/python"
-if [[ -x "$PYTHON313_PATH" ]]; then
-    PYTHON_PATH="$PYTHON313_PATH"
+# Check for Python 3.12 specifically (via Homebrew)
+PYTHON312_PATH="/opt/homebrew/opt/python@3.12/libexec/bin/python"
+if [[ -x "$PYTHON312_PATH" ]]; then
+    PYTHON_PATH="$PYTHON312_PATH"
     PYTHON_VERSION=$($PYTHON_PATH --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
-    info "✓ Python $PYTHON_VERSION found (via python@3.13)"
+    info "✓ Python $PYTHON_VERSION found (via python@3.12)"
 else
-    # Check if system python3 is 3.13
+    # Check if system python3 is in the acceptable range (3.10-3.12)
     if command -v python3 &> /dev/null; then
         PYTHON_VERSION=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
         PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
         PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
 
-        if [[ "$PYTHON_MAJOR" -eq 3 && "$PYTHON_MINOR" -eq 13 ]]; then
+        if [[ "$PYTHON_MAJOR" -eq 3 && "$PYTHON_MINOR" -ge 10 && "$PYTHON_MINOR" -le 12 ]]; then
+            # Python 3.10-3.12 are all compatible with numpy 1.24.3
             PYTHON_PATH=$(command -v python3)
-            info "✓ Python $PYTHON_VERSION found"
-        elif [[ "$PYTHON_MAJOR" -ge 3 && "$PYTHON_MINOR" -ge 14 ]]; then
-            warn "Python $PYTHON_VERSION detected - may have compatibility issues with Aider"
-            warn "Installing Python 3.13 for better package compatibility..."
-            brew install python@3.13 > /tmp/python313-install.log 2>&1 || fatal "Failed to install Python 3.13"
-            PYTHON_PATH="$PYTHON313_PATH"
+            info "✓ Python $PYTHON_VERSION found (compatible)"
+        elif [[ "$PYTHON_MAJOR" -ge 3 && "$PYTHON_MINOR" -ge 13 ]]; then
+            warn "Python $PYTHON_VERSION detected - incompatible with Aider dependencies"
+            warn "Aider requires numpy 1.24.3 which has no wheels for Python 3.13+"
+            warn "Installing Python 3.12 for compatibility..."
+            brew install python@3.12 > /tmp/python312-install.log 2>&1 || fatal "Failed to install Python 3.12"
+            PYTHON_PATH="$PYTHON312_PATH"
             PYTHON_VERSION=$($PYTHON_PATH --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
             info "✓ Python $PYTHON_VERSION installed"
-        elif [[ "$PYTHON_MAJOR" -eq 3 && "$PYTHON_MINOR" -ge 10 ]]; then
-            # Python 3.10-3.12 are also acceptable
-            PYTHON_PATH=$(command -v python3)
-            info "✓ Python $PYTHON_VERSION found (acceptable)"
         else
             warn "Python $PYTHON_VERSION is too old (need 3.10+)"
-            info "Installing Python 3.13 via Homebrew (this may take a minute)..."
-            brew install python@3.13 > /tmp/python313-install.log 2>&1 || fatal "Failed to install Python 3.13"
-            PYTHON_PATH="$PYTHON313_PATH"
+            info "Installing Python 3.12 via Homebrew (this may take a minute)..."
+            brew install python@3.12 > /tmp/python312-install.log 2>&1 || fatal "Failed to install Python 3.12"
+            PYTHON_PATH="$PYTHON312_PATH"
             PYTHON_VERSION=$($PYTHON_PATH --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
             info "✓ Python $PYTHON_VERSION installed"
         fi
     else
-        # No Python found, install 3.13
-        info "Installing Python 3.13 via Homebrew (this may take a minute)..."
-        brew install python@3.13 > /tmp/python313-install.log 2>&1 || fatal "Failed to install Python 3.13"
-        PYTHON_PATH="$PYTHON313_PATH"
+        # No Python found, install 3.12
+        info "Installing Python 3.12 via Homebrew (this may take a minute)..."
+        brew install python@3.12 > /tmp/python312-install.log 2>&1 || fatal "Failed to install Python 3.12"
+        PYTHON_PATH="$PYTHON312_PATH"
         PYTHON_VERSION=$($PYTHON_PATH --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
         info "✓ Python $PYTHON_VERSION installed"
     fi
@@ -385,11 +384,11 @@ else
             PIPX_PYTHON_VERSION=$($PIPX_SHARED_PYTHON --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
             PIPX_PYTHON_MINOR=$(echo "$PIPX_PYTHON_VERSION" | cut -d. -f2)
 
-            # Python 3.14+ causes compatibility issues with Aider dependencies
-            if [[ "$PIPX_PYTHON_MINOR" -ge 14 ]]; then
-                warn "pipx is using Python $PIPX_PYTHON_VERSION which has compatibility issues with Aider"
+            # Python 3.13+ causes compatibility issues with Aider dependencies (numpy 1.24.3 has no wheels)
+            if [[ "$PIPX_PYTHON_MINOR" -ge 13 ]]; then
+                warn "pipx is using Python $PIPX_PYTHON_VERSION which is incompatible with Aider"
                 echo ""
-                echo "Python 3.14+ doesn't have pre-built wheels for some Aider dependencies (numpy 1.24.x)."
+                echo "Aider requires numpy 1.24.3 which has no pre-built wheels for Python 3.13+."
                 echo "We need to reinstall pipx to use Python $PYTHON_VERSION instead."
                 echo ""
                 prompt "Reinstall pipx with Python $PYTHON_VERSION for compatibility? [Y/n]:"
@@ -399,7 +398,7 @@ else
                 if [[ "$REINSTALL_PIPX" =~ ^[Yy]$ ]]; then
                     PIPX_NEEDS_REINSTALL=true
                 else
-                    warn "Continuing with Python $PIPX_PYTHON_VERSION - Aider installation may fail"
+                    warn "Continuing with Python $PIPX_PYTHON_VERSION - Aider installation WILL fail"
                 fi
             else
                 info "✓ pipx is using compatible Python $PIPX_PYTHON_VERSION"
@@ -453,7 +452,7 @@ else
         echo ""
         echo "Installation log saved to: /tmp/aider-install.log"
         echo "Common issues:"
-        echo "  • Python version compatibility (requires 3.10-3.13)"
+        echo "  • Python version compatibility (requires 3.10-3.12, NOT 3.13+)"
         echo "  • Network connectivity during package download"
         echo "  • Disk space or permissions"
         echo ""
