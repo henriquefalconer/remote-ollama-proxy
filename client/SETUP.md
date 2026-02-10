@@ -47,7 +47,7 @@ Or simply open a new terminal window.
 
 ```bash
 # Check environment variables
-echo $OLLAMA_API_BASE          # http://ai-server:11434/v1
+echo $OLLAMA_API_BASE          # http://ai-server:11434 (no /v1 suffix)
 echo $OPENAI_API_BASE          # http://ai-server:11434/v1
 echo $OPENAI_API_KEY           # ollama
 
@@ -55,7 +55,7 @@ echo $OPENAI_API_KEY           # ollama
 aider --version
 
 # Test server connectivity (if server is running and you have access)
-curl $OLLAMA_API_BASE/models
+curl $OLLAMA_API_BASE/v1/models
 ```
 
 ## Usage
@@ -95,6 +95,35 @@ If you installed via curl-pipe:
 ```
 
 ## Troubleshooting
+
+### Critical v0.0.3 Bug: Aider fails with 404 errors
+
+**Symptom**: If you installed v0.0.3 and Aider fails with 404 errors like `http://remote-ollama:11434/v1/api/show not found`.
+
+**Root Cause**: The v0.0.3 `env.template` incorrectly set `OLLAMA_API_BASE` with a `/v1` suffix. This causes Aider/LiteLLM to construct invalid URLs.
+
+**Solution (v0.0.4+)**: Fixed in v0.0.4. To update your v0.0.3 installation:
+
+```bash
+# Option 1: Re-run the installer (recommended)
+./scripts/install.sh
+
+# Option 2: Manual fix - edit ~/.ai-client/env
+nano ~/.ai-client/env
+# Change this line:
+#   export OLLAMA_API_BASE=http://remote-ollama:11434/v1
+# To this (remove /v1):
+#   export OLLAMA_API_BASE=http://remote-ollama:11434
+
+# Then reload your environment:
+exec $SHELL
+```
+
+**Verification**: Check that your environment variables are correct:
+```bash
+echo $OLLAMA_API_BASE   # Should be http://remote-ollama:11434 (NO /v1)
+echo $OPENAI_API_BASE   # Should be http://remote-ollama:11434/v1 (WITH /v1)
+```
 
 ### "Connection refused" when testing connectivity
 

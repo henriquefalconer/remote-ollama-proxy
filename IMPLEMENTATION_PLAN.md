@@ -3,7 +3,7 @@
  SPDX-License-Identifier: Proprietary
 -->
 
-## Implementation Status (v0.0.4-dev) ⚠️ CRITICAL BUG FIX IN PROGRESS
+## Implementation Status (v0.0.4) ✅ CRITICAL BUG FIX COMPLETE
 
 **⚠️ Critical bug discovered in v0.0.3 during real-world Aider usage (2026-02-10)**
 
@@ -11,7 +11,7 @@
 
 **Root Cause**: Spec files defined `OLLAMA_API_BASE` with `/v1` suffix, but Ollama-aware tools need to access native endpoints at `/api/*` (without `/v1` prefix) for model metadata operations.
 
-**Fix Status**: Spec files updated (2026-02-10). Implementation files (env.template, install scripts, test scripts) require updates to match corrected spec.
+**Fix Status**: ✅ COMPLETE (2026-02-10). All implementation files updated to match corrected specs. Hardware testing required to verify fix on real systems.
 
 ---
 
@@ -47,40 +47,43 @@ Prioritized task list for achieving full spec implementation of both server and 
   - ✅ `client/specs/API_CONTRACT.md` - Corrected `OLLAMA_API_BASE` to `http://ai-server:11434` (no `/v1` suffix)
   - ✅ `client/specs/SCRIPTS.md` - Updated test validation to check for correct URL format
   - ✅ `server/specs/INTERFACES.md` - Added note about Ollama native endpoints
-- **Implementation files**: ⚠️ REQUIRES UPDATES to match corrected specs
-  - ❌ `client/config/env.template` - Still has incorrect `OLLAMA_API_BASE` with `/v1`
-  - ⚠️ `client/scripts/install.sh` - Uses env.template (will inherit bug)
-  - ⚠️ `client/scripts/test.sh` - Validates old incorrect format
-  - ⚠️ All deployed installations - Require manual fix or re-install
-- **Documentation**: ⚠️ REQUIRES UPDATES to reflect corrected environment variables
+- **Implementation files**: ✅ ALL UPDATED (2026-02-10) - All files now match corrected specs
+  - ✅ `client/config/env.template` - Updated to `OLLAMA_API_BASE` without `/v1` suffix
+  - ✅ `client/scripts/install.sh` - Uses corrected env.template
+  - ✅ `client/scripts/test.sh` - Validates correct URL format, includes end-to-end Aider test
+  - ⚠️ All deployed installations - Require manual fix or re-install (see troubleshooting in documentation)
+- **Documentation**: ✅ UPDATED (2026-02-10) - All user-facing docs reflect corrected environment variables
 - **Server implementation**: ✅ No changes needed (server serves both `/v1/*` and `/api/*` endpoints)
-- **Testing**: ⚠️ REQUIRES NEW TEST - Add end-to-end Aider test to catch this class of bugs
+- **Testing**: ✅ END-TO-END TEST ADDED - Test 26 in client/scripts/test.sh validates Aider functionality
 
 ## Remaining Work (Priority Order)
 
-⚠️ **CRITICAL BUG FIX REQUIRED** - v0.0.4 in progress
+✅ **CRITICAL BUG FIX COMPLETE** - v0.0.4 code changes complete (2026-02-10)
 
-v0.0.3 contained a critical environment variable bug discovered during real-world Aider usage. Automated tests passed but did not catch this issue because they validated API endpoints without running Aider end-to-end.
+v0.0.3 contained a critical environment variable bug discovered during real-world Aider usage. All code changes have been implemented. Hardware testing is the only remaining task before v0.0.4 release.
 
-### Priority G: Critical Bug Fix - OLLAMA_API_BASE (URGENT)
+### Priority G: Critical Bug Fix - OLLAMA_API_BASE ✅ COMPLETE
 
 **Discovered**: 2026-02-10 during first real Aider usage attempt
 **Severity**: CRITICAL - Aider completely non-functional with current configuration
 **Impact**: All v0.0.3 installations broken for Aider usage
+**Status**: ✅ ALL CODE CHANGES COMPLETE (2026-02-10) - Hardware testing pending
 
 **Tasks**:
-- [ ] Update `client/config/env.template` line 4: Change `OLLAMA_API_BASE=http://__HOSTNAME__:11434/v1` to `OLLAMA_API_BASE=http://__HOSTNAME__:11434`
-- [ ] Update `client/scripts/test.sh` environment validation to check for correct URL format (no `/v1` on OLLAMA_API_BASE)
-- [ ] Add end-to-end Aider test to `client/scripts/test.sh` to catch runtime integration issues
-- [ ] Update all user-facing documentation (README.md, SETUP.md) to reflect corrected environment variables
-- [ ] Add troubleshooting section for users with v0.0.3 installations
-- [ ] Re-run client hardware testing with corrected configuration
-- [ ] Document lessons learned: automated tests must include end-to-end validation, not just API endpoint checks
+- ✅ Update `client/config/env.template` line 4: Changed `OLLAMA_API_BASE=http://__HOSTNAME__:11434/v1` to `OLLAMA_API_BASE=http://__HOSTNAME__:11434` (removed `/v1` suffix)
+- ✅ Update `client/scripts/test.sh` environment validation to check for correct URL format (no `/v1` on OLLAMA_API_BASE, WITH `/v1` on OPENAI_API_BASE)
+- ✅ Add end-to-end Aider test to `client/scripts/test.sh` to catch runtime integration issues (test 26 added, TOTAL_TESTS incremented to 28)
+- ✅ Update all user-facing documentation (README.md, SETUP.md) to reflect corrected environment variables
+- ✅ Add troubleshooting section for users with v0.0.3 installations (added to client/README.md and client/SETUP.md)
+- ⚠️ Re-run client hardware testing with corrected configuration (code complete, testing pending on real hardware)
+- ✅ Document lessons learned: automated tests must include end-to-end validation, not just API endpoint checks (documented in "Post-Release Critical Finding" section below)
 
 **Specs already fixed** (2026-02-10):
 - ✅ `client/specs/API_CONTRACT.md` - Corrected and added rationale
 - ✅ `client/specs/SCRIPTS.md` - Updated validation requirements
 - ✅ `server/specs/INTERFACES.md` - Added clarifying note
+
+**Completion Note**: All code changes for the critical bug fix are complete. The corrected configuration needs to be validated on real hardware with an actual Aider workflow. Users with v0.0.3 installations can fix their setup by manually editing `~/.ai-client/env` or re-running the install script.
 
 ---
 

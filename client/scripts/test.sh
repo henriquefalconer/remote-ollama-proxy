@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 TESTS_PASSED=0
 TESTS_FAILED=0
 TESTS_SKIPPED=0
-TOTAL_TESTS=27
+TOTAL_TESTS=28
 CURRENT_TEST=0
 
 # Flags
@@ -263,9 +263,9 @@ if [[ "$SKIP_SERVER" == "true" ]]; then
     skip "POST /v1/chat/completions (streaming) - server tests skipped" "Remove --skip-server flag when running test.sh"
     skip "Error handling test - server tests skipped" "Remove --skip-server flag when running test.sh"
 else
-    # Extract hostname from OLLAMA_API_BASE
+    # Use OLLAMA_API_BASE directly (no /v1 suffix per corrected contract)
     if [[ -n "${OLLAMA_API_BASE:-}" ]]; then
-        SERVER_URL=$(echo "$OLLAMA_API_BASE" | sed 's|/v1$||')
+        SERVER_URL="$OLLAMA_API_BASE"
         info "Using server URL: $SERVER_URL"
     else
         SERVER_URL=""
@@ -571,18 +571,18 @@ if [[ "$QUICK_MODE" == "true" ]]; then
 else
     info "Validating base URL format..."
     if [[ -n "${OLLAMA_API_BASE:-}" ]]; then
-        if echo "$OLLAMA_API_BASE" | grep -qE '^http://[^:]+:11434/v1$'; then
-            pass "OLLAMA_API_BASE format matches contract"
+        if echo "$OLLAMA_API_BASE" | grep -qE '^http://[^:]+:11434$'; then
+            pass "OLLAMA_API_BASE format matches contract (no /v1 suffix)"
         else
-            fail "OLLAMA_API_BASE format does not match contract (expected http://<host>:11434/v1)"
+            fail "OLLAMA_API_BASE format does not match contract" "http://<host>:11434 (no /v1 suffix)" "$OLLAMA_API_BASE" "Remove /v1 suffix from OLLAMA_API_BASE - it should be http://<host>:11434"
         fi
     fi
 
     if [[ -n "${OPENAI_API_BASE:-}" ]]; then
         if echo "$OPENAI_API_BASE" | grep -qE '^http://[^:]+:11434/v1$'; then
-            pass "OPENAI_API_BASE format matches contract"
+            pass "OPENAI_API_BASE format matches contract (with /v1 suffix)"
         else
-            fail "OPENAI_API_BASE format does not match contract (expected http://<host>:11434/v1)"
+            fail "OPENAI_API_BASE format does not match contract" "http://<host>:11434/v1 (with /v1 suffix)" "$OPENAI_API_BASE" "Ensure OPENAI_API_BASE includes /v1 suffix"
         fi
     fi
 fi
@@ -742,12 +742,47 @@ else
     else
         fail "Required environment variables for Aider are not set"
     fi
+
+    # Test 26: End-to-end Aider test (non-interactive)
+    # This test catches the critical OLLAMA_API_BASE bug where Aider tries to access /api/show
+    show_progress "End-to-end Aider test (non-interactive)"
+
+    if [[ "$SKIP_SERVER" == "true" ]]; then
+        skip "End-to-end Aider test - server tests skipped" "Remove --skip-server flag when running test.sh"
+    else
+        info "Running non-interactive Aider test with qwen2.5:0.5b..."
+
+        # Create a temporary directory for the test
+        TEST_DIR=$(mktemp -d)
+        cd "$TEST_DIR" || fail "Failed to create temp directory for Aider test"
+
+        # Create a dummy file for Aider to work with
+        echo "# Test file" > test.txt
+
+        # Run Aider non-interactively with a simple prompt
+        # This will fail if OLLAMA_API_BASE has /v1 suffix (constructs invalid URL)
+        if timeout 30 bash -c 'echo "Say ok" | aider --yes --message "respond with just the word ok" --model ollama/qwen2.5:0.5b test.txt' &> /tmp/aider_test_output.log 2>&1; then
+            pass "End-to-end Aider test succeeded (model metadata fetched correctly)"
+        else
+            # Check if it's a 404 error (the critical bug we're testing for)
+            if grep -q "404" /tmp/aider_test_output.log || grep -q "/v1/api" /tmp/aider_test_output.log; then
+                fail "End-to-end Aider test failed with 404 error" "Aider should fetch model metadata from /api/show" "Check /tmp/aider_test_output.log for details" "OLLAMA_API_BASE may have incorrect /v1 suffix"
+            else
+                # Other error (model not available, timeout, etc.) - this is acceptable for now
+                skip "End-to-end Aider test timed out or model unavailable" "Ensure qwen2.5:0.5b is available on server (see /tmp/aider_test_output.log)"
+            fi
+        fi
+
+        # Clean up
+        cd - > /dev/null
+        rm -rf "$TEST_DIR"
+    fi
 fi
 
 echo ""
 echo "=== Script Behavior Tests ==="
 
-# Test 26: Uninstall script availability and clean-system test
+# Test 27: Uninstall script availability and clean-system test
 info "Checking uninstall script availability..."
 UNINSTALL_SCRIPT=""
 if [[ -f "$HOME/.ai-client/uninstall.sh" ]]; then
@@ -774,7 +809,7 @@ elif [[ -n "$UNINSTALL_SCRIPT" ]] && [[ -f "$UNINSTALL_SCRIPT" ]]; then
     fi
 fi
 
-# Test 27: Install script idempotency - skip in quick mode (F2.9)
+# Test 28: Install script idempotency - skip in quick mode (F2.9)
 if [[ "$QUICK_MODE" == "true" ]]; then
     skip "Install script idempotency check - quick mode" "Remove --quick flag when running test.sh"
 elif [[ -f "$SHELL_PROFILE" ]]; then

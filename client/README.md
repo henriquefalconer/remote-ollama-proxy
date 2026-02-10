@@ -126,11 +126,11 @@ The test suite validates:
 
 ```
 remote-ollama ai-client Test Suite
-Running 27 tests
+Running 28 tests
 
 === Environment Configuration Tests ===
 ✓ PASS Environment file exists (~/.ai-client/env)
-✓ PASS OLLAMA_API_BASE is set: http://remote-ollama:11434/v1
+✓ PASS OLLAMA_API_BASE is set: http://remote-ollama:11434
 ✓ PASS OPENAI_API_BASE is set: http://remote-ollama:11434/v1
 ✓ PASS OPENAI_API_KEY is set correctly: ollama
 • SKIP AIDER_MODEL is not set (optional)
