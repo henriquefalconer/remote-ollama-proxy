@@ -27,15 +27,25 @@ error() {
 # Banner
 echo "================================================"
 echo "  private-ai-client Uninstall Script"
+echo "  Removes client-side changes and configuration"
 echo "================================================"
 echo ""
+
+# Track what was actually removed
+REMOVED_ITEMS=()
+REMOVAL_FAILURES=()
 
 # Step 1: Remove Aider
 info "Removing Aider..."
 if command -v pipx &> /dev/null; then
     if pipx list 2>/dev/null | grep -q aider-chat; then
-        pipx uninstall aider-chat || warn "Failed to uninstall Aider (continuing anyway)"
-        info "✓ Aider removed"
+        if pipx uninstall aider-chat > /dev/null 2>&1; then
+            info "✓ Aider removed"
+            REMOVED_ITEMS+=("Aider (via pipx)")
+        else
+            warn "Failed to uninstall Aider (continuing anyway)"
+            REMOVAL_FAILURES+=("Aider (pipx uninstall failed)")
+        fi
     else
         info "Aider not installed via pipx, skipping"
     fi
@@ -64,7 +74,9 @@ for PROFILE in "$HOME/.zshrc" "$HOME/.bashrc"; do
     fi
 done
 
-if [[ $REMOVED_COUNT -eq 0 ]]; then
+if [[ $REMOVED_COUNT -gt 0 ]]; then
+    REMOVED_ITEMS+=("Shell profile modifications ($REMOVED_COUNT file(s))")
+else
     info "No shell profile modifications found, skipping"
 fi
 
@@ -74,6 +86,7 @@ CLIENT_DIR="$HOME/.private-ai-client"
 if [[ -d "$CLIENT_DIR" ]]; then
     rm -rf "$CLIENT_DIR"
     info "✓ Removed: $CLIENT_DIR"
+    REMOVED_ITEMS+=("Configuration directory ($CLIENT_DIR)")
 else
     info "Configuration directory not found, skipping"
 fi
@@ -84,17 +97,41 @@ echo "================================================"
 echo "  Uninstall Complete!"
 echo "================================================"
 echo ""
-info "Removed:"
-echo "  - Aider (via pipx)"
-echo "  - $CLIENT_DIR"
-echo "  - Shell profile modifications"
-echo ""
+
+# Show what was actually removed
+if [[ ${#REMOVED_ITEMS[@]} -gt 0 ]]; then
+    info "Successfully removed:"
+    for item in "${REMOVED_ITEMS[@]}"; do
+        echo "  - $item"
+    done
+    echo ""
+else
+    info "Nothing was removed (clean system or already uninstalled)"
+    echo ""
+fi
+
+# Show any failures
+if [[ ${#REMOVAL_FAILURES[@]} -gt 0 ]]; then
+    warn "Removal failures:"
+    for failure in "${REMOVAL_FAILURES[@]}"; do
+        echo "  - $failure"
+    done
+    echo ""
+fi
+
 info "Preserved (as expected):"
 echo "  - Tailscale"
 echo "  - Homebrew"
 echo "  - pipx"
 echo "  - Python"
 echo ""
-echo "Changes will take effect in new terminal sessions."
-echo "Current terminal may still have old environment variables loaded."
+
+# Terminal reload reminder (inside summary box)
+if [[ ${#REMOVED_ITEMS[@]} -gt 0 ]]; then
+    info "Important:"
+    echo "  Close and reopen your terminal, or run: exec \$SHELL"
+    echo "  (Changes will take effect in new terminal sessions)"
+fi
+
+echo "================================================"
 echo ""
