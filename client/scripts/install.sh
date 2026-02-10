@@ -495,14 +495,13 @@ else
 fi
 
 # Final summary
-section_break
+echo ""
+echo ""
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║                                                                ║"
 echo "║                  ✓  Installation Complete!                    ║"
 echo "║                                                                ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
-echo ""
-echo -e "${GREEN}Aider is ready and configured to use your remote Ollama server!${NC}"
 echo ""
 
 # Determine actual shell command for reload
@@ -513,22 +512,42 @@ elif [[ "$USER_SHELL" == "bash" ]]; then
     RELOAD_CMD="exec bash"
 fi
 
-echo "Reload your shell:"
-echo ""
-echo -e "  ${YELLOW}$RELOAD_CMD${NC}"
-echo ""
-
 if [[ "$SERVER_REACHABLE" == "true" ]]; then
-    echo "Start using Aider:"
+    echo -e "  ✓ Aider installed: ${GREEN}ready${NC}"
+    echo -e "  ✓ Connected to server: ${GREEN}$SERVER_HOSTNAME${NC}"
+    echo -e "  ✓ Models available: ${GREEN}1${NC}"
     echo ""
-    echo -e "  ${GREEN}aider${NC}                          # Uses default model"
-    echo -e "  ${GREEN}aider --model ollama/model-name${NC}    # Select specific model"
+    section_break
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│ What's Next                                                 │"
+    echo "└─────────────────────────────────────────────────────────────┘"
     echo ""
-    echo -e "Your server has ${GREEN}1 model${NC} available."
+    echo "  1. Reload your shell:"
+    echo ""
+    echo -e "     ${BLUE}$RELOAD_CMD${NC}"
+    echo ""
+    echo "  2. Start using Aider:"
+    echo ""
+    echo -e "     ${BLUE}aider${NC}                          # Uses default model"
+    echo -e "     ${BLUE}aider --model ollama/model-name${NC}    # Select specific model"
     echo ""
 else
-    echo -e "${YELLOW}Server not reachable.${NC} Once running, start Aider:"
+    echo -e "  ✓ Aider installed: ${GREEN}ready${NC}"
+    echo -e "  ⚠ Server: ${YELLOW}not reachable${NC}"
     echo ""
-    echo -e "  ${GREEN}aider --model ollama/model-name${NC}"
+    section_break
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│ What's Next                                                 │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    echo ""
+    echo "  1. Ensure server is running and Tailscale is connected"
+    echo ""
+    echo "  2. Reload your shell:"
+    echo ""
+    echo -e "     ${BLUE}$RELOAD_CMD${NC}"
+    echo ""
+    echo "  3. Start using Aider:"
+    echo ""
+    echo -e "     ${BLUE}aider --model ollama/model-name${NC}"
     echo ""
 fi
