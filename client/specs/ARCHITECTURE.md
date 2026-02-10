@@ -15,7 +15,7 @@
 
 - Guarantee the exact HTTP contract in API_CONTRACT.md
 - Support both OpenAI-compatible API (for Aider) and Anthropic-compatible API (for Claude Code)
-- Resolve the hostname `ai-server` via Tailscale
+- Resolve the hostname `remote-ollama` via Tailscale
 - Accept connections only from authorized Tailscale tags
 
 ## Client Runtime

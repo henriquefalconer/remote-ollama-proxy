@@ -7,7 +7,7 @@
 - Checks / installs Homebrew, Python 3.10+, Tailscale
 - Installs both Tailscale GUI (for user) and CLI (for connection detection)
 - Opens Tailscale app for login + device approval if not already connected
-- Prompts for server hostname (default: ai-server)
+- Prompts for server hostname (default: remote-ollama)
 - Creates `~/.ai-client/` directory
 - Generates `~/.ai-client/env` with exact variables from API_CONTRACT.md
 - Prompts for user consent before modifying shell profile
