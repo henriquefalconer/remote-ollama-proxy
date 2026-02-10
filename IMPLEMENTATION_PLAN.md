@@ -6,7 +6,7 @@
 # Implementation Plan
 
 **Last Updated**: 2026-02-10
-**Current Version**: v0.0.4
+**Current Version**: v0.0.17
 
 v1 (Aider/OpenAI API) is complete and tested on hardware. v2+ (Claude Code/Anthropic API, version management, analytics) has documentation foundations done; core implementation in progress. Latest: server Anthropic tests + progress tracking implemented; client Claude Code installation with optional Ollama integration complete; version management complete (compatibility check, version pinning, downgrade script); client uninstall v2+ cleanup complete; analytics bug fixes complete (H3-1); client v2+ tests added (H2-5); analytics decision matrix implemented (H3-6); client SETUP.md updated with v2+ documentation (H3-5); server README.md updated with v2+ test documentation (H3-3); H4-3 verified auto-resolved. **Phase 2 complete (6/6 items). Phase 3 complete (3/3 items). Phase 4: 6 done, 1 remaining (H3-2 hardware testing)**.
 
