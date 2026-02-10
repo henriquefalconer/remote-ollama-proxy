@@ -498,28 +498,16 @@ fi
 section_break
 echo -e "${GREEN}✓ Installation Complete!${NC}"
 echo ""
-info "Environment: $ENV_FILE"
-info "Shell profile: $SHELL_PROFILE"
-info "Uninstall: $UNINSTALL_SCRIPT"
-echo ""
-
-# Show important next steps
-echo -e "${YELLOW}→ Reload your shell:${NC}"
-echo "    exec \$SHELL"
-echo ""
 
 if [[ "$SERVER_REACHABLE" == "true" ]]; then
-    echo -e "${GREEN}→ Start using Aider:${NC}"
-    echo "    aider                    # Interactive mode"
-    echo "    aider --yes              # Auto-accept mode"
+    echo "Reload your shell and start using Aider:"
+    echo ""
+    echo -e "  ${YELLOW}exec \$SHELL${NC}"
+    echo -e "  ${GREEN}aider${NC}"
 else
-    echo -e "${YELLOW}→ Once server is running:${NC}"
-    echo "    ./client/scripts/test.sh # Verify setup"
-    echo "    aider                    # Start using"
+    echo "Server not reachable yet. Once it's running:"
+    echo ""
+    echo -e "  ${YELLOW}exec \$SHELL${NC}"
+    echo -e "  ${GREEN}aider${NC}"
 fi
-echo ""
-
-# Optional configuration hint
-echo -e "${BLUE}Tip:${NC} Set a default model by uncommenting AIDER_MODEL in $ENV_FILE"
-echo "     Example: export AIDER_MODEL=ollama/qwen2.5-coder:32b"
 echo ""
