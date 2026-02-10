@@ -3,9 +3,9 @@ set -euo pipefail   # Exit on error, undefined vars, and pipe failures
 
 # Usage: ./loop.sh [plan] [max_iterations] [--goal <text> | -g <text> | ...]
 # Examples:
-#   ./loop.sh plan --goal "a beautiful dark-mode todo app with offline sync"
-#   ./loop.sh plan 8 -g "a minimal blog engine with RSS and markdown editor"
-#   ./loop.sh --goal "a CLI password manager in Rust" 10
+#   ./loop.sh plan --goal "repo with full spec implementation"
+#   ./loop.sh plan 8 -g "repo with full spec implementation"
+#   ./loop.sh --goal "repo with full spec implementation" 10
 #   ./loop.sh plan                                      # ← will ask you interactively
 
 # Color and style definitions
