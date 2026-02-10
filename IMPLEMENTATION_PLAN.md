@@ -975,6 +975,334 @@ Every implemented script was compared line-by-line against its spec requirements
 
 ---
 
+# v2+ Implementation Plan (Claude Code / Anthropic API)
+
+**Created**: 2026-02-10
+**Status**: NOT STARTED
+**Scope**: All work required to achieve full spec implementation beyond v1 (Aider/OpenAI)
+
+## v2+ Audit Summary
+
+| Area | Status | Gap Description |
+|------|--------|-----------------|
+| Server v1 (OpenAI API) | COMPLETE | All 4 scripts, 20 tests, docs |
+| Server v2+ (Anthropic API) | PARTIALLY COMPLETE | Spec exists, no `/v1/messages` tests in test.sh, SCRIPTS.md does not specify them |
+| Client v1 (Aider) | COMPLETE | All scripts, 28 tests, docs |
+| Client v2+ (Claude Code) | NOT IMPLEMENTED | 3 new scripts missing, 4 existing scripts need v2+ enhancements |
+| Root-level analytics | PARTIALLY COMPLETE | Scripts exist, partial run data in `analytics/` |
+| Documentation | NEEDS CORRECTION | Client README.md references non-existent scripts without disclaimer |
+
+## Prioritized Implementation Items
+
+---
+
+### H1-1: Fix client/README.md documentation accuracy (BLOCKING)
+
+- **Priority**: H1 (critical -- misleads users NOW about non-existent features)
+- **What**: The client README.md (lines 42-44, 163-165, 170-178) references `check-compatibility.sh`, `pin-versions.sh`, and `downgrade-claude.sh` as if they exist and are usable. It also presents Claude Code integration (alias setup, backend options) as available during installation, but `install.sh` has no Claude Code support. This is misleading for any user who reads the README today.
+- **Action**: Add a clear "v2+ Planned Features" disclaimer section. Move all v2+ references (version management scripts, Claude Code integration, analytics) under that section with a note that they are not yet implemented. Alternatively, revert the README to only document v1 features and add a "Roadmap" section at the bottom.
+- **Spec references**: `client/specs/FILES.md` lines 21-23 (lists v2+ scripts), `client/specs/FUNCTIONALITIES.md` lines 12-44 (v2+ functionalities)
+- **Dependencies**: None
+- **Effort**: Trivial (text edits only)
+
+---
+
+### H1-2: Update server/specs/SCRIPTS.md to specify /v1/messages tests
+
+- **Priority**: H1 (spec gap -- must be closed before implementing server v2+ tests)
+- **What**: `server/specs/SCRIPTS.md` defines test.sh behavior (lines 125-189) but only specifies OpenAI API endpoint tests (`/v1/models`, `/v1/chat/completions`, `/v1/responses`). The Anthropic-compatible endpoint `POST /v1/messages` is not mentioned despite being documented in `server/specs/INTERFACES.md` (lines 30-50) and thoroughly specified in `server/specs/ANTHROPIC_COMPATIBILITY.md`. The spec must be updated to include `/v1/messages` test requirements before implementation.
+- **Action**: Add a new "Anthropic API Endpoint Tests (v2+)" subsection to `server/specs/SCRIPTS.md` under the test.sh section, specifying tests for:
+  - `POST /v1/messages` non-streaming request succeeds
+  - `POST /v1/messages` streaming request returns correct SSE event types
+  - `POST /v1/messages` with system prompt
+  - `POST /v1/messages` error behavior (nonexistent model)
+  - Optional: tool use, thinking blocks (model-dependent)
+- **Spec references**: `server/specs/INTERFACES.md` lines 30-50, `server/specs/ANTHROPIC_COMPATIBILITY.md` lines 43-125 (endpoint spec), `server/specs/SCRIPTS.md` lines 125-189 (test.sh spec)
+- **Dependencies**: None
+- **Effort**: Small (spec text only, no code)
+
+---
+
+### H1-3: Add /v1/messages tests to server/scripts/test.sh
+
+- **Priority**: H1 (critical v2+ blocking -- validates that the Anthropic API surface works)
+- **What**: `server/scripts/test.sh` currently has 20 tests covering only OpenAI API endpoints. It does not test the Anthropic-compatible `POST /v1/messages` endpoint at all, despite `server/specs/INTERFACES.md` and `server/specs/ANTHROPIC_COMPATIBILITY.md` documenting it as a supported API surface. Since Ollama 0.5.0+ provides this natively, no server code changes are needed -- only test coverage.
+- **Action**: Add new tests to `server/scripts/test.sh`:
+  1. `POST /v1/messages` non-streaming with text content (verify response has `id`, `type`, `role`, `content`, `stop_reason`, `usage`)
+  2. `POST /v1/messages` streaming (verify SSE event sequence: `message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`)
+  3. `POST /v1/messages` with system prompt (verify system prompt is processed)
+  4. `POST /v1/messages` error case (nonexistent model returns appropriate error)
+  5. Optional/skippable: tool use test, thinking blocks test (model-dependent)
+  - Update `TOTAL_TESTS` counter accordingly
+  - Add `--skip-anthropic-tests` flag for environments with Ollama <0.5.0
+- **Spec references**: `server/specs/ANTHROPIC_COMPATIBILITY.md` lines 43-125 (request/response format), `server/specs/INTERFACES.md` lines 30-50
+- **Dependencies**: H1-2 (spec must be updated first)
+- **Effort**: Medium (4-6 new tests, following existing test patterns)
+
+---
+
+### H1-4: Add Claude Code integration to client/scripts/install.sh
+
+- **Priority**: H1 (critical v2+ blocking -- this is the primary entry point for Claude Code + Ollama setup)
+- **What**: `client/scripts/install.sh` currently only sets up Aider (v1). Per `client/specs/CLAUDE_CODE.md` lines 238-285 and `client/specs/FUNCTIONALITIES.md` lines 14-19, the install script should, after the Aider setup, optionally offer Claude Code + Ollama integration. This includes: prompting the user, creating the `claude-ollama` shell alias with proper marker comments (`# >>> claude-ollama >>>` / `# <<< claude-ollama <<<`), and adding Anthropic environment variables to the env file or as part of the alias.
+- **Action**:
+  1. After the existing Aider installation section, add a new optional section: "Claude Code + Ollama Integration"
+  2. Display info about benefits/limitations (per `CLAUDE_CODE.md` lines 259-276)
+  3. Prompt user: "Create 'claude-ollama' shell alias? (y/N)"
+  4. If yes: append `claude-ollama` alias to shell profile with marker comments (per `client/specs/FILES.md` lines 70-72)
+  5. The alias should be: `alias claude-ollama='ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="" ANTHROPIC_BASE_URL=http://<hostname>:11434 claude --dangerously-skip-permissions'`
+  6. Use the same hostname captured during the Aider env setup
+  7. Maintain idempotency: check for existing `claude-ollama` markers before appending
+- **Spec references**: `client/specs/CLAUDE_CODE.md` lines 238-285 (installation integration), `client/specs/API_CONTRACT.md` lines 141-164 (Anthropic env vars and alias), `client/specs/FILES.md` lines 70-72 (shell profile markers), `client/specs/FUNCTIONALITIES.md` lines 14-19
+- **Dependencies**: None (can proceed in parallel with H1-2/H1-3)
+- **Effort**: Medium (add ~60-80 lines to existing install.sh)
+
+---
+
+### H1-5: Add Anthropic env vars to client/config/env.template
+
+- **Priority**: H1 (supports H1-4)
+- **What**: `client/config/env.template` currently contains only 4 OpenAI/Aider variables. Per `client/specs/API_CONTRACT.md` lines 141-164, the Anthropic variables (`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`) should be available for users who opt into Claude Code integration. These should be commented out by default (similar to `AIDER_MODEL`) since the Claude Code integration is optional.
+- **Action**: Add commented-out Anthropic variables to `env.template`:
+  ```
+  # Claude Code + Ollama (optional, uncomment if using claude-ollama alias)
+  # export ANTHROPIC_AUTH_TOKEN=ollama
+  # export ANTHROPIC_API_KEY=""
+  # export ANTHROPIC_BASE_URL=http://__HOSTNAME__:11434
+  ```
+- **Spec references**: `client/specs/API_CONTRACT.md` lines 149-153 (Anthropic env vars)
+- **Dependencies**: None
+- **Effort**: Trivial
+
+---
+
+### H2-1: Create client/scripts/check-compatibility.sh
+
+- **Priority**: H2 (important v2+ -- enables safe Claude Code updates)
+- **What**: This script does not exist. Per `client/specs/VERSION_MANAGEMENT.md` lines 82-131, it should verify that the installed Claude Code version and the remote Ollama server version are a tested combination. It embeds a compatibility matrix as a bash associative array, detects both tool versions, and reports compatibility status.
+- **Action**: Create `client/scripts/check-compatibility.sh` implementing:
+  1. Detect Claude Code version: `claude --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'`
+  2. Detect Ollama version from server: `curl -sf http://<hostname>:11434/api/version`
+  3. Read hostname from `~/.ai-client/env` (parse `OLLAMA_API_BASE`)
+  4. Embedded compatibility matrix: `declare -A COMPATIBLE_VERSIONS`
+  5. Exit codes: 0=compatible, 1=tool not found/server unreachable, 2=version mismatch, 3=unknown compatibility
+  6. Output: version info, compatibility status, recommendations
+  7. Mismatch output: show expected Ollama version, suggest `brew upgrade ollama`
+  8. Unknown output: suggest testing and adding to matrix
+  9. Color-coded output, clear banner, consistent UX with other scripts
+- **Spec references**: `client/specs/VERSION_MANAGEMENT.md` lines 66-131 (complete check script spec), `client/specs/FILES.md` line 22
+- **Dependencies**: None (can be built independently)
+- **Effort**: Medium (standalone script, ~100-150 lines)
+
+---
+
+### H2-2: Create client/scripts/pin-versions.sh
+
+- **Priority**: H2 (important v2+ -- enables version stability)
+- **What**: This script does not exist. Per `client/specs/VERSION_MANAGEMENT.md` lines 133-178, it should detect current Claude Code and Ollama versions, optionally pin them (npm/brew), and create a `~/.ai-client/.version-lock` file recording the known-working combination.
+- **Action**: Create `client/scripts/pin-versions.sh` implementing:
+  1. Detect Claude Code version and installation method (npm vs Homebrew)
+  2. Detect Ollama version from server
+  3. For Claude Code (npm): `npm install -g @anthropic-ai/claude-code@${VERSION}`
+  4. For Claude Code (Homebrew): `brew pin claude-code`
+  5. For Ollama: display instructions for user to run on server (`brew pin ollama`)
+  6. Create `~/.ai-client/.version-lock` with: `CLAUDE_CODE_VERSION`, `OLLAMA_VERSION`, `TESTED_DATE`, `STATUS=working`
+  7. Color-coded output, clear banner
+- **Spec references**: `client/specs/VERSION_MANAGEMENT.md` lines 133-178 (complete pin script spec), `client/specs/FILES.md` line 22, line 61
+- **Dependencies**: None
+- **Effort**: Medium (~80-120 lines)
+
+---
+
+### H2-3: Create client/scripts/downgrade-claude.sh
+
+- **Priority**: H2 (important v2+ -- enables recovery from breaking updates)
+- **What**: This script does not exist. Per `client/specs/VERSION_MANAGEMENT.md` lines 180-226, it should read the `.version-lock` file created by `pin-versions.sh` and downgrade Claude Code to the recorded version. Supports both npm and Homebrew installations.
+- **Action**: Create `client/scripts/downgrade-claude.sh` implementing:
+  1. Check `~/.ai-client/.version-lock` exists (abort with message if not)
+  2. Read `CLAUDE_CODE_VERSION` from lock file
+  3. Display current version and target version
+  4. Prompt for confirmation: "Continue? (y/N)"
+  5. Detect installation method (npm vs Homebrew)
+  6. npm: `npm install -g @anthropic-ai/claude-code@${VERSION}`
+  7. Homebrew: display manual steps (Homebrew doesn't support easy downgrades)
+  8. Verify: check `claude --version` matches target
+  9. Report success or failure
+- **Spec references**: `client/specs/VERSION_MANAGEMENT.md` lines 180-226 (complete downgrade script spec), `client/specs/FILES.md` line 23
+- **Dependencies**: H2-2 (depends on pin-versions.sh creating the .version-lock file)
+- **Effort**: Small-medium (~60-100 lines)
+
+---
+
+### H2-4: Add v2+ cleanup to client/scripts/uninstall.sh
+
+- **Priority**: H2 (must reverse what H1-4 creates)
+- **What**: `client/scripts/uninstall.sh` currently only removes Aider, shell profile ai-client markers, and `~/.ai-client/`. Per `client/specs/FILES.md` lines 70-72, v2+ adds `claude-ollama` alias markers to the shell profile, and per line 61, `~/.ai-client/.version-lock` is created by pin-versions.sh. Uninstall must also remove these.
+- **Action**:
+  1. Add removal of `claude-ollama` marker-delimited block from shell profile (`# >>> claude-ollama >>>` / `# <<< claude-ollama <<<`)
+  2. The `~/.ai-client/.version-lock` file is already covered by the existing `rm -rf ~/.ai-client/` step
+  3. Update summary to mention claude-ollama alias removal (if it was present)
+- **Spec references**: `client/specs/FILES.md` lines 70-72, `client/specs/SCRIPTS.md` lines 41-59
+- **Dependencies**: H1-4 (must know what install.sh creates to reverse it)
+- **Effort**: Small (~15-25 lines added to existing script)
+
+---
+
+### H2-5: Add v2+ tests to client/scripts/test.sh
+
+- **Priority**: H2 (validates all v2+ client functionality)
+- **What**: `client/scripts/test.sh` currently has 28 tests covering only v1 (Aider/OpenAI). Per `client/specs/FUNCTIONALITIES.md` lines 12-44 and `client/specs/CLAUDE_CODE.md`, the following should also be tested:
+  - Claude Code binary installed and in PATH (if opted in)
+  - `claude-ollama` alias exists in shell profile (if opted in)
+  - `POST /v1/messages` endpoint reachable from client
+  - Anthropic env vars in alias are correct
+  - Version management scripts exist and have valid syntax
+  - `.version-lock` file format (if exists)
+- **Action**: Add a new "Claude Code Integration Tests (v2+)" category and a "Version Management Tests (v2+)" category. These should be skippable with a `--skip-claude` flag. Tests to add:
+  1. Claude Code binary available (`which claude`)
+  2. `claude-ollama` alias present in shell profile (check markers)
+  3. `POST /v1/messages` non-streaming request to server succeeds
+  4. `POST /v1/messages` streaming returns SSE events
+  5. `check-compatibility.sh` exists and has valid syntax
+  6. `pin-versions.sh` exists and has valid syntax
+  7. `downgrade-claude.sh` exists and has valid syntax
+  8. `.version-lock` file format validation (if file exists)
+  - Update `TOTAL_TESTS` counter
+- **Spec references**: `client/specs/SCRIPTS.md` lines 61-138, `client/specs/CLAUDE_CODE.md` lines 119-131 (tool use capabilities), `client/specs/API_CONTRACT.md` lines 75-164 (Anthropic API contract)
+- **Dependencies**: H1-3 (server tests should pass first), H1-4 (install creates what we test), H2-1/H2-2/H2-3 (version scripts must exist)
+- **Effort**: Medium (8-10 new tests following existing patterns)
+
+---
+
+### H3-1: Validate analytics infrastructure completeness
+
+- **Priority**: H3 (nice-to-have -- analytics scripts already exist and partially work)
+- **What**: `loop-with-analytics.sh`, `compare-analytics.sh`, and `ANALYTICS_README.md` all exist at the project root. The `analytics/` directory has one partial run (`run-20260210-064148`). Per `client/specs/ANALYTICS.md`, these should be validated against the spec to confirm they capture all specified metrics (tool counts, token usage, cache hit rates, workload classification). No new scripts need to be created.
+- **Action**:
+  1. Audit `loop-with-analytics.sh` against `client/specs/ANALYTICS.md` lines 424-438 (implementation requirements)
+  2. Audit `compare-analytics.sh` against `client/specs/ANALYTICS.md` lines 440-454 (comparison tool requirements)
+  3. Validate that `analytics/run-*/summary.md` format matches spec (lines 168-227)
+  4. Document any gaps and fix if present
+- **Spec references**: `client/specs/ANALYTICS.md` (entire file), `client/specs/FUNCTIONALITIES.md` lines 22-37
+- **Dependencies**: None
+- **Effort**: Small-medium (audit + potential fixes)
+
+---
+
+### H3-2: Hardware testing for v2+ features
+
+- **Priority**: H3 (required before v2+ release, but not blocking development)
+- **What**: After all H1 and H2 items are implemented, the complete v2+ feature set must be tested on real hardware with both server and client machines on the same Tailscale network. This includes:
+  - Server: `/v1/messages` endpoint tests pass (from H1-3)
+  - Client: Claude Code integration works (alias, env vars)
+  - Client: Version management scripts function correctly
+  - End-to-end: `claude-ollama` alias successfully connects to Ollama and receives a response
+- **Action**:
+  1. Run `server/scripts/test.sh --verbose` on server machine (should now include Anthropic tests)
+  2. Run `client/scripts/test.sh --verbose` on client machine (should now include v2+ tests)
+  3. Manual end-to-end: execute `claude-ollama --model <model> -p "Hello, count 1 to 5"` and verify response
+  4. Test version management: run check-compatibility, pin-versions, verify .version-lock created
+  5. Document results in this implementation plan
+- **Spec references**: All v2+ specs
+- **Dependencies**: All H1 and H2 items complete
+- **Effort**: Large (requires physical access to Apple Silicon machines on Tailscale)
+
+---
+
+### H3-3: Update server/README.md to document Anthropic API testing
+
+- **Priority**: H3 (documentation polish)
+- **What**: `server/README.md` documents Anthropic API support (lines 67-83) but the "Testing & Verification" section only shows OpenAI test output. Once H1-3 adds `/v1/messages` tests, the README should be updated to reflect the new test count and show sample Anthropic test output.
+- **Action**: After H1-3 and H3-2 are complete, update the server README testing section with:
+  1. New total test count (20 + N Anthropic tests)
+  2. Sample output showing Anthropic API test results
+  3. Note about `--skip-anthropic-tests` flag for Ollama <0.5.0
+- **Spec references**: `server/specs/FILES.md`, `server/specs/ANTHROPIC_COMPATIBILITY.md`
+- **Dependencies**: H1-3 (tests must exist), H3-2 (hardware testing provides sample output)
+- **Effort**: Trivial
+
+---
+
+## Dependency Graph
+
+```
+H1-1 (README fix)           ──── standalone, do first
+H1-2 (spec update)          ──── standalone
+H1-3 (server /v1/messages)  ──── depends on H1-2
+H1-4 (install.sh claude)    ──── standalone
+H1-5 (env.template)         ──── standalone, supports H1-4
+
+H2-1 (check-compatibility)  ──── standalone
+H2-2 (pin-versions)         ──── standalone
+H2-3 (downgrade-claude)     ──── depends on H2-2
+H2-4 (uninstall v2+)        ──── depends on H1-4
+H2-5 (test.sh v2+)          ──── depends on H1-3, H1-4, H2-1, H2-2, H2-3
+
+H3-1 (analytics audit)      ──── standalone
+H3-2 (hardware testing)     ──── depends on ALL H1 + H2
+H3-3 (server README update) ──── depends on H1-3, H3-2
+```
+
+## Recommended Execution Order
+
+**Phase 1: Foundations (parallelizable)**
+1. H1-1 -- Fix client README (trivial, immediate user-facing improvement)
+2. H1-2 -- Update server SCRIPTS.md spec (unblocks H1-3)
+3. H1-5 -- Add Anthropic vars to env.template (trivial, unblocks H1-4)
+
+**Phase 2: Core Implementation (partially parallelizable)**
+4. H1-3 -- Server /v1/messages tests (depends on H1-2)
+5. H1-4 -- Client install.sh Claude Code integration (depends on H1-5)
+6. H2-1 -- check-compatibility.sh (independent)
+7. H2-2 -- pin-versions.sh (independent)
+
+**Phase 3: Dependent Implementation**
+8. H2-3 -- downgrade-claude.sh (depends on H2-2)
+9. H2-4 -- Uninstall v2+ cleanup (depends on H1-4)
+10. H2-5 -- Client test.sh v2+ tests (depends on H1-3, H1-4, H2-1, H2-2, H2-3)
+
+**Phase 4: Validation and Polish**
+11. H3-1 -- Analytics infrastructure audit (independent)
+12. H3-2 -- Hardware testing (depends on all above)
+13. H3-3 -- Server README update (depends on H3-2)
+
+## Effort Estimation Summary
+
+| Priority | Item | Effort | Files Modified/Created |
+|----------|------|--------|----------------------|
+| H1-1 | README fix | Trivial | `client/README.md` (modify) |
+| H1-2 | Spec update | Small | `server/specs/SCRIPTS.md` (modify) |
+| H1-3 | Server /v1/messages tests | Medium | `server/scripts/test.sh` (modify) |
+| H1-4 | Install Claude Code | Medium | `client/scripts/install.sh` (modify) |
+| H1-5 | Env template Anthropic vars | Trivial | `client/config/env.template` (modify) |
+| H2-1 | check-compatibility.sh | Medium | `client/scripts/check-compatibility.sh` (create) |
+| H2-2 | pin-versions.sh | Medium | `client/scripts/pin-versions.sh` (create) |
+| H2-3 | downgrade-claude.sh | Small-medium | `client/scripts/downgrade-claude.sh` (create) |
+| H2-4 | Uninstall v2+ | Small | `client/scripts/uninstall.sh` (modify) |
+| H2-5 | Test v2+ | Medium | `client/scripts/test.sh` (modify) |
+| H3-1 | Analytics audit | Small-medium | `loop-with-analytics.sh`, `compare-analytics.sh` (audit/modify) |
+| H3-2 | Hardware testing | Large | None (manual testing) |
+| H3-3 | Server README update | Trivial | `server/README.md` (modify) |
+
+**Total new files**: 3 (`check-compatibility.sh`, `pin-versions.sh`, `downgrade-claude.sh`)
+**Total modified files**: 7 (`client/README.md`, `server/specs/SCRIPTS.md`, `server/scripts/test.sh`, `client/scripts/install.sh`, `client/config/env.template`, `client/scripts/uninstall.sh`, `client/scripts/test.sh`)
+**Total estimated effort**: ~3-5 days of focused development + hardware testing
+
+## Implementation Constraints (carried forward from v1)
+
+All v1 constraints remain in effect for v2+:
+
+1. **Security**: No public internet exposure. Tailscale-only. No built-in auth.
+2. **API contract**: `client/specs/API_CONTRACT.md` is the single source of truth.
+3. **Independence**: Server and client remain independent except via the API contract.
+4. **Idempotency**: All scripts must be safe to re-run.
+5. **No stubs**: Implement completely or not at all.
+6. **macOS only**: Server requires Apple Silicon. Client requires macOS 14+.
+7. **Claude Code integration is OPTIONAL**: Always prompt for user consent. Default behavior should not require Claude Code.
+8. **Anthropic cloud is the default**: The Ollama backend is an alternative, not a replacement. Never present it as the primary Claude Code backend.
+
+---
+
 ## Resolved Documentation Issues
 
 All previously identified documentation inconsistencies have been corrected (2026-02-10):
