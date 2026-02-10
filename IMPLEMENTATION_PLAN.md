@@ -987,11 +987,11 @@ Every implemented script was compared line-by-line against its spec requirements
 | Area | Status | Gap Description |
 |------|--------|-----------------|
 | Server v1 (OpenAI API) | COMPLETE | All 4 scripts, 20 tests, docs |
-| Server v2+ (Anthropic API) | PARTIALLY COMPLETE | Spec exists, no `/v1/messages` tests in test.sh, SCRIPTS.md does not specify them |
+| Server v2+ (Anthropic API) | FOUNDATION COMPLETE | Spec updated with `/v1/messages` test requirements; SETUP.md documents Anthropic API; implementation tests remain |
 | Client v1 (Aider) | COMPLETE | All scripts, 28 tests, docs |
-| Client v2+ (Claude Code) | NOT IMPLEMENTED | 3 new scripts missing, 4 existing scripts need v2+ enhancements |
+| Client v2+ (Claude Code) | FOUNDATION COMPLETE | README.md corrected; env.template has Anthropic vars; SCRIPTS.md updated with v2+ test specs; implementation remains |
 | Root-level analytics | PARTIALLY COMPLETE | Scripts exist but have divide-by-zero bugs; missing spec-required decision matrix output |
-| Documentation | NEEDS CORRECTION | Client README.md references non-existent scripts; server/client SETUP.md missing v2+ content; SCRIPTS.md missing v2+ test requirements and VERSION_MANAGEMENT.md cross-reference |
+| Documentation | FOUNDATION COMPLETE | Client README.md corrected; server/client SETUP.md updated; SCRIPTS.md specs updated for v2+ |
 | Plan internal consistency | ✅ FIXED | Priority 1 env.template example corrected (removed stale `/v1` URL) |
 
 ## Prioritized Implementation Items
@@ -1006,6 +1006,7 @@ Every implemented script was compared line-by-line against its spec requirements
 - **Spec references**: `client/specs/FILES.md` lines 21-23 (lists v2+ scripts), `client/specs/FUNCTIONALITIES.md` lines 12-44 (v2+ functionalities)
 - **Dependencies**: None
 - **Effort**: Trivial (text edits only)
+- **Status**: ✅ COMPLETE
 
 ---
 
@@ -1022,6 +1023,7 @@ Every implemented script was compared line-by-line against its spec requirements
 - **Spec references**: `server/specs/INTERFACES.md` lines 30-50, `server/specs/ANTHROPIC_COMPATIBILITY.md` lines 43-125 (endpoint spec), `server/specs/SCRIPTS.md` lines 125-189 (test.sh spec)
 - **Dependencies**: None
 - **Effort**: Small (spec text only, no code)
+- **Status**: ✅ COMPLETE
 
 ---
 
@@ -1075,6 +1077,7 @@ Every implemented script was compared line-by-line against its spec requirements
 - **Spec references**: `client/specs/API_CONTRACT.md` lines 149-153 (Anthropic env vars)
 - **Dependencies**: None
 - **Effort**: Trivial
+- **Status**: ✅ COMPLETE
 
 ---
 
@@ -1194,6 +1197,7 @@ Every implemented script was compared line-by-line against its spec requirements
 - **Spec references**: `client/specs/SCRIPTS.md` (entire file), `client/specs/VERSION_MANAGEMENT.md` (v2+ script specs), `client/specs/CLAUDE_CODE.md` lines 119-131 (tool use capabilities)
 - **Dependencies**: None
 - **Effort**: Small (spec text only, no code)
+- **Status**: ✅ COMPLETE
 
 ---
 
@@ -1268,6 +1272,7 @@ Every implemented script was compared line-by-line against its spec requirements
 - **Spec references**: `server/specs/ANTHROPIC_COMPATIBILITY.md` (entire file), `server/specs/INTERFACES.md` lines 30-50
 - **Dependencies**: None
 - **Effort**: Small (documentation text only)
+- **Status**: ✅ COMPLETE
 
 ---
 

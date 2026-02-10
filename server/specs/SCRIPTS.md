@@ -132,7 +132,7 @@ Comprehensive test script that validates all server functionality. Designed to r
 - Verify Ollama is listening on port 11434
 - Verify service responds to basic HTTP requests
 
-### API Endpoint Tests
+### API Endpoint Tests (OpenAI-Compatible)
 - `GET /v1/models` - returns JSON model list
 - `GET /v1/models/{model}` - returns single model details (requires at least one pulled model)
 - `POST /v1/chat/completions` - non-streaming request succeeds
@@ -140,6 +140,39 @@ Comprehensive test script that validates all server functionality. Designed to r
 - `POST /v1/chat/completions` - with `stream_options.include_usage` returns usage data
 - `POST /v1/chat/completions` - JSON mode (`response_format: {"type": "json_object"}`)
 - `POST /v1/responses` - experimental endpoint (note if requires Ollama 0.5.0+)
+
+### API Endpoint Tests (Anthropic-Compatible, v2+)
+
+These tests validate the Anthropic Messages API endpoint (`/v1/messages`) introduced in Ollama 0.5.0+. If Ollama version is < 0.5.0, these tests should be skipped with appropriate messaging.
+
+- `POST /v1/messages` - non-streaming request succeeds with text content
+  - Verify response has required fields: `id`, `type: "message"`, `role: "assistant"`, `content` (array), `stop_reason`, `usage`
+  - Verify `content[0].type: "text"` and `content[0].text` is a non-empty string
+  - Verify `usage` has `input_tokens` and `output_tokens`
+- `POST /v1/messages` - streaming request returns correct SSE event sequence
+  - Verify event sequence: `message_start` → `content_block_start` → `content_block_delta` (multiple) → `content_block_stop` → `message_delta` → `message_stop`
+  - Verify `message_start` event has `message` with `id`, `type`, `role`, `content` (empty array initially), `usage`
+  - Verify `content_block_delta` events have `delta.text` with incremental text
+  - Verify final `message_stop` event completes the stream
+- `POST /v1/messages` - with system prompt
+  - Verify system prompt is processed (request includes `system: "You are a helpful assistant"` or system array)
+  - Verify response acknowledges or respects system instructions (implementation-dependent, may just verify 200 OK)
+- `POST /v1/messages` - error case with nonexistent model
+  - Verify appropriate error status (400, 404, or 500)
+  - Verify error response has meaningful error message
+- `POST /v1/messages` - tool use (optional/skippable, model-dependent)
+  - If model supports tools, verify `tools` parameter is accepted
+  - Verify `tool_use` content blocks are returned when appropriate
+  - Mark as SKIP if model doesn't support tools
+- `POST /v1/messages` - thinking blocks (optional/skippable, model-dependent)
+  - If model supports thinking, verify `thinking` content blocks are returned
+  - Mark as SKIP if model doesn't support thinking
+
+**Flag Support**:
+- Add `--skip-anthropic-tests` flag to skip all Anthropic API tests (for environments with Ollama < 0.5.0)
+- If `--skip-anthropic-tests` is not provided but Ollama version < 0.5.0 is detected, auto-skip with message: "Anthropic API tests skipped (requires Ollama 0.5.0+, detected X.Y.Z)"
+
+**Total Test Count**: Update `TOTAL_TESTS` variable to include these new tests (current: 20, add ~5-6 non-optional Anthropic tests = ~25-26 total)
 
 ### Error Behavior Tests
 - 500 error on inference with nonexistent model

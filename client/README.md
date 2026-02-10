@@ -1,54 +1,49 @@
 # remote-ollama ai-client
 
-macOS client setup for connecting to remote Ollama, supporting both Aider and Claude Code.
+macOS client setup for connecting to remote Ollama, supporting Aider (v1) and Claude Code (v2+ - planned).
+
+## Current Status
+
+**✅ v1 (Available Now)**: Aider integration with OpenAI-compatible API
+**🚧 v2+ (In Development)**: Claude Code integration, analytics, version management
+
+This README documents both current (v1) and planned (v2+) features. Features marked "v2+" are not yet implemented.
 
 ## Overview
 
-The remote-ollama ai-client is a one-time installer that configures your macOS environment to use remote Ollama via OpenAI-compatible and Anthropic-compatible APIs.
+The remote-ollama ai-client is a one-time installer that configures your macOS environment to use remote Ollama via OpenAI-compatible APIs.
 
-After installation:
+**Currently available (v1)**:
 - **Aider** (and other OpenAI-compatible tools) connect to remote Ollama automatically
-- **Claude Code** can optionally use remote Ollama backend (alternative to Anthropic cloud)
 - Zero manual configuration per session
 - All API calls go through the secure Tailscale network
-- Optional analytics and version management tools for Claude Code
 
-## What This Does
+**Planned (v2+, not yet available)**:
+- Claude Code integration with optional remote Ollama backend
+- Performance analytics tools for measuring tool usage
+- Version compatibility management for Claude Code + Ollama
+
+## What v1 Does (Available Now)
 
 1. Installs and configures Tailscale membership
 2. Creates environment variables pointing to remote Ollama server
 3. Installs Aider with automatic Ollama connection
-4. Optionally configures Claude Code to use remote Ollama backend (user consent required)
-5. Provides analytics tools for measuring performance
-6. Provides version compatibility management for Claude Code + Ollama
-7. Provides clean uninstallation
+4. Provides clean uninstallation
 
-## Quick Reference
+## Quick Reference (v1 - Available Now)
 
-### Aider (v1)
+### Aider Commands
 
 | Operation | Command | Description |
 |-----------|---------|-------------|
 | **Start Aider** | `aider` | Launch Aider in interactive mode |
 | | `aider --yes` | Launch Aider in YOLO mode (auto-accept changes) |
 
-### Claude Code (v2+ - Optional)
-
-| Operation | Command | Description |
-|-----------|---------|-------------|
-| **With cloud API** | `claude --model opus-4-6` | Use Anthropic cloud (default, recommended) |
-| | `claude --model sonnet` | Use Sonnet 4.5 via cloud |
-| **With remote Ollama** | `claude-ollama --model qwen3-coder` | Use remote Ollama backend (if alias configured) |
-| **Version check** | `./scripts/check-compatibility.sh` | Verify Claude Code + Ollama compatibility |
-| **Pin versions** | `./scripts/pin-versions.sh` | Lock to current known-working versions |
-| **Rollback** | `./scripts/downgrade-claude.sh` | Downgrade Claude Code if update breaks |
-
 ### Configuration
 
 | Operation | Command | Description |
 |-----------|---------|-------------|
 | **Check config** | `echo $OPENAI_API_BASE` | Display OpenAI API base URL (for Aider) |
-| | `echo $ANTHROPIC_BASE_URL` | Display Anthropic API base (if Ollama backend configured) |
 | | `cat ~/.ai-client/env` | View all environment variables |
 | **Test connectivity** | `curl $OPENAI_API_BASE/models` | Test OpenAI API connection |
 | | `tailscale status` | Check Tailscale connection status |
@@ -57,9 +52,9 @@ After installation:
 
 | Operation | Command | Description |
 |-----------|---------|-------------|
-| **Run tests** | `./scripts/test.sh` | Run comprehensive test suite |
-| | `./scripts/test.sh --skip-server` | Run tests without server connectivity checks |
-| | `./scripts/test.sh --quick` | Run quick tests (skip model inference) |
+| **Run tests** | `./client/scripts/test.sh` | Run comprehensive test suite (28 tests) |
+| | `./client/scripts/test.sh --skip-server` | Run tests without server connectivity checks |
+| | `./client/scripts/test.sh --quick` | Run quick tests (skip model inference) |
 
 ### Shell Management
 
@@ -68,120 +63,61 @@ After installation:
 | **Reload environment** | `source ~/.ai-client/env` | Reload environment variables in current shell |
 | | `exec $SHELL` | Restart shell to apply environment changes |
 
-## Claude Code Integration (v2+ - Optional)
+### Uninstall
 
-### Backend Options
+| Operation | Command | Description |
+|-----------|---------|-------------|
+| **Uninstall** | `./client/scripts/uninstall.sh` | Remove client configuration and Aider |
+| | `~/.ai-client/uninstall.sh` | Uninstall if installed via curl-pipe |
 
-**Anthropic Cloud API** (default, recommended):
-- Full model capabilities (Opus 4.6, Sonnet 4.5)
-- Prompt caching support (critical for performance)
-- Highest quality output
-- Pay-per-use pricing
+---
 
-**Remote Ollama Backend** (optional, experimental):
-- Privacy (all inference on private Tailscale network)
-- No API costs
-- Lower quality models (qwen3-coder, glm-4.7, etc.)
-- No prompt caching (~2-3x slower on repeated contexts)
-- Limited parallelism
+## Roadmap: v2+ Planned Features (Not Yet Available)
 
-### When to Use Which Backend
+The following features are documented in the specifications but not yet implemented. They are planned for future releases:
 
-✅ **Use Anthropic Cloud (default)** for:
-- Complex coding tasks
-- Autonomous workflows
-- Production work
-- Tasks requiring high quality
+### Claude Code Integration (v2+ - Planned)
 
-✅ **Use Remote Ollama (optional)** for:
-- Privacy-critical code
-- Simple file edits
-- Quick refactoring
-- Development when server is accessible via Tailscale
+**Goal**: Optional integration allowing Claude Code to use remote Ollama backend as an alternative to Anthropic cloud API.
 
-### Setup
+**Planned capabilities**:
+- Shell alias (`claude-ollama`) for easy backend switching
+- Opt-in during installation (user consent required)
+- Support for both Anthropic cloud (default) and remote Ollama backend
+- Backend selection based on use case (cloud for complex tasks, Ollama for privacy-critical work)
 
-During installation, you'll be asked:
-```
-Optional: Claude Code + Ollama Integration
+**Why this matters**: Some users may prefer running inference on their private Tailscale network for sensitive code. However, Anthropic cloud API will remain the default and recommended option due to superior quality and performance (prompt caching support).
 
-Create 'claude-ollama' shell alias? (y/N)
-```
+### Performance Analytics (v2+ - Planned)
 
-If you choose **yes**, you'll get a shell alias for easy switching:
-```bash
-claude --model opus-4-6            # Uses cloud (always)
-claude-ollama --model qwen3-coder  # Uses remote Ollama
-```
+**Goal**: Measure actual Claude Code tool usage and performance to make data-driven decisions about backend suitability.
 
-If you choose **no**, Claude Code will use Anthropic cloud API only (recommended for most users).
+**Planned tools**:
+- `loop-with-analytics.sh` - Enhanced execution with performance measurement
+- `compare-analytics.sh` - Compare performance between different backends
 
-## Performance Analytics (v2+ - Optional)
-
-Measure actual tool usage and performance to make informed decisions about backend suitability.
-
-### Tools
-
-- **`loop-with-analytics.sh`** - Enhanced execution with performance measurement
-- **`compare-analytics.sh`** - Compare performance between different backends or configurations
-
-### What Gets Measured
-
-- Tool usage counts (Read, Bash, Edit, Write, Grep, Glob, Task spawns, etc.)
-- Token usage (input, cache creation, cache reads, output)
+**What would be measured**:
+- Tool usage counts (Read, Bash, Edit, Write, Grep, Glob, Task spawns)
+- Token usage (input, cache creation/reads, output)
 - Cache efficiency (hit rate percentage)
 - Workload classification (shallow vs deep operations)
 
-### Example Output
+**Why this matters**: Empirical data to validate whether remote Ollama is suitable for specific workflows, or if Anthropic cloud API's prompt caching provides essential performance benefits.
 
-```
-═══════════════════════════════════════════════════════
-   Iteration Analytics
-═══════════════════════════════════════════════════════
-Tool Usage:
-  Read: 12 | Bash: 3 | Edit: 2 | Write: 1
-  Grep: 5 | Glob: 8 | Subagents: 6 | Todo: 2
+### Version Management (v2+ - Planned)
 
-Token Usage:
-  Input: 15,234 | Cache creation: 34,428 | Cache read: 13,697
-  Output: 1,842 | Cache hit rate: 72%
+**Goal**: Prevent breaking changes from Claude Code or Ollama updates.
 
-Workload:
-  Shallow ops: 25 | Deep ops: 3
-  Ratio = 25:3
-═══════════════════════════════════════════════════════
-```
+**Planned tools**:
+- `check-compatibility.sh` - Verify Claude Code and Ollama versions are tested together
+- `pin-versions.sh` - Lock tools to known-working versions
+- `downgrade-claude.sh` - Rollback Claude Code if update breaks
 
-See `ANALYTICS_README.md` for complete guide.
+**Why this matters**: Ollama's Anthropic API compatibility is experimental. Claude Code updates may require features Ollama doesn't support yet. Version management would prevent downtime from breaking changes.
 
-## Version Management (v2+ - Optional)
+**Current workaround**: For now, users can manually track working version combinations and avoid automatic updates of Claude Code when using it with Ollama.
 
-Prevent breaking changes from tool updates.
-
-### Tools
-
-- **`check-compatibility.sh`** - Verify Claude Code and Ollama versions are tested together
-- **`pin-versions.sh`** - Lock tools to known-working versions
-- **`downgrade-claude.sh`** - Rollback Claude Code if update breaks
-
-### Usage
-
-```bash
-# Before updating Claude Code
-./client/scripts/check-compatibility.sh
-
-# Pin current versions (recommended for production)
-./client/scripts/pin-versions.sh
-
-# If update breaks, rollback
-./client/scripts/downgrade-claude.sh
-```
-
-### Why This Matters
-
-Ollama's Anthropic API compatibility is experimental. Claude Code updates may require features Ollama doesn't support yet. Version management prevents downtime from breaking changes.
-| **Uninstall** | `./scripts/uninstall.sh` | Remove client configuration and Aider |
-| | `~/.ai-client/uninstall.sh` | Uninstall if installed via curl-pipe |
+---
 
 ## Requirements
 

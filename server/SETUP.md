@@ -95,6 +95,8 @@ In Tailscale admin console at tailscale.com:
 
 ### 7. Verify server reachability
 
+#### OpenAI-Compatible API (for Aider and OpenAI-compatible tools)
+
 From an authorized client machine:
 
 ```bash
@@ -105,6 +107,61 @@ curl http://remote-ollama:11434/v1/chat/completions \
     "messages": [{"role": "user", "content": "Say hello"}]
   }'
 ```
+
+#### Anthropic-Compatible API (for Claude Code, requires Ollama 0.5.0+)
+
+Test the Anthropic Messages API endpoint:
+
+```bash
+curl http://remote-ollama:11434/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ollama" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "any-available-model",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Say hello"}]
+  }'
+```
+
+**Expected response format:**
+```json
+{
+  "id": "msg_abc123",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "Hello! How can I help you today?"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "usage": {
+    "input_tokens": 10,
+    "output_tokens": 15
+  }
+}
+```
+
+**Test streaming (optional):**
+
+```bash
+curl http://remote-ollama:11434/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ollama" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "any-available-model",
+    "max_tokens": 1024,
+    "stream": true,
+    "messages": [{"role": "user", "content": "Say hello"}]
+  }'
+```
+
+This returns Server-Sent Events (SSE) with event types: `message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`.
+
+**Note**: The Anthropic-compatible API is experimental in Ollama and requires version 0.5.0 or later. See `server/specs/ANTHROPIC_COMPATIBILITY.md` for complete details on supported features and limitations.
 
 ## Server is now operational
 
@@ -119,8 +176,16 @@ The Ollama service runs as a user-level LaunchAgent and starts automatically at 
 # Check if service is loaded
 launchctl list | grep com.ollama
 
-# Test API availability
+# Test OpenAI API availability
 curl -sf http://localhost:11434/v1/models
+
+# Test Anthropic API availability (Ollama 0.5.0+)
+curl -sf http://localhost:11434/v1/messages \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: test" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{"model":"test","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}'
 ```
 
 ### Start Service
