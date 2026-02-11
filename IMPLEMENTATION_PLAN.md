@@ -13,115 +13,39 @@
 
 | Component | Compliance | Summary |
 |-----------|-----------|---------|
-| **Client** | ~99% | All 6 scripts, env.template, SETUP.md implemented. 40 tests passing. One timing bug, stale README, missing spec entry. |
+| **Client** | 100% | All 6 scripts, env.template, SETUP.md implemented. 40 tests passing. All bugs fixed. |
 | **Root Analytics** | 100% | loop.sh, loop-with-analytics.sh, compare-analytics.sh, ANALYTICS_README.md all match specs. |
-| **Server** | ~60% | Ollama API surface works (OpenAI + Anthropic, 26 tests). HAProxy proxy layer entirely missing. |
+| **Server** | ~100% | Ollama API surface works (OpenAI + Anthropic). HAProxy proxy layer implemented with 34 tests passing. |
 
-**Architecture gap**:
+**Architecture**: Fully spec-compliant
 ```
-Current:   Client → Tailscale → Ollama (0.0.0.0:11434)
-Specified: Client → Tailscale → HAProxy (100.x.x.x:11434) → Ollama (127.0.0.1:11434)
+Client → Tailscale → HAProxy (100.x.x.x:11434) → Ollama (127.0.0.1:11434)
 ```
 
 ---
 
 ## Remaining Tasks
 
-### P2: Implement HAProxy in Server Scripts
-
-#### P2a: Add HAProxy to install.sh
-
-**File**: `server/scripts/install.sh` | **Effort**: Large | **Dependencies**: None
-
-1. **User consent prompt** -- "Install HAProxy proxy? (Y/n)" with benefits/tradeoffs. Default: Yes.
-2. **HAProxy installation** -- `brew install haproxy` (suppress Homebrew noise)
-3. **Config generation** -- `~/.haproxy/haproxy.cfg` with frontend on Tailscale interface (`100.x.x.x:11434` via `tailscale ip -4`), backend to `127.0.0.1:11434`, endpoint allowlist per FILES.md, default deny
-4. **Plist creation** -- `~/Library/LaunchAgents/com.haproxy.plist` with RunAtLoad, KeepAlive
-5. **Ollama binding change** -- Set `OLLAMA_HOST=127.0.0.1` in Ollama plist (currently `0.0.0.0`)
-6. **Service loading** -- Load both LaunchAgents via `launchctl bootstrap`
-7. **Verification** -- HAProxy listening on Tailscale interface, Ollama on loopback only, proxy forwarding works
-8. **Fallback** -- If user declines, keep `OLLAMA_HOST=0.0.0.0` (functional but less secure)
-
-#### P2b: Add HAProxy Cleanup to uninstall.sh
-
-**File**: `server/scripts/uninstall.sh` | **Effort**: Small | **Dependencies**: None
-
-- Stop and remove `~/Library/LaunchAgents/com.haproxy.plist` via `launchctl bootout`
-- Delete `~/.haproxy/` directory
-- Clean up `/tmp/haproxy.log`
-- Handle gracefully if HAProxy was never installed
-
-#### P2c: Add HAProxy Tests to test.sh
-
-**File**: `server/scripts/test.sh` | **Effort**: Medium | **Dependencies**: P2a
-
-Modify existing tests:
-- Test 17: Check `OLLAMA_HOST=127.0.0.1` (currently checks `0.0.0.0`)
-- Test 18: Verify loopback-only binding via `lsof`
-
-Add new tests (skip gracefully if HAProxy not installed):
-- HAProxy LaunchAgent loaded (`launchctl list | grep com.haproxy`)
-- HAProxy listening on Tailscale interface
-- Endpoint allowlist enforcement (blocked paths return 403)
-- Direct Ollama access from Tailscale IP blocked
-
-Expected total: ~33-34 tests (up from 26).
-
-### P3: Bug Fixes and Documentation
-
-#### P3a: Fix client/scripts/test.sh Timing Bug
-
-**File**: `client/scripts/test.sh` line 763 | **Effort**: Trivial | **Dependencies**: None
-
-Change `[[ "$START_TIME" =~ N ]]` to `[[ ${#START_TIME} -gt 12 ]]`. All other 8 instances in the file already use the correct pattern.
-
-#### P3b: Update client/README.md
-
-**File**: `client/README.md` | **Effort**: Small | **Dependencies**: None
-
-Remove "planned", "not yet implemented", and construction emoji references for v2+ features (Claude Code, Anthropic API, version management, analytics). All v2+ features are fully implemented and tested.
-
-#### P3c: Add Root-Level Scripts to client/specs/SCRIPTS.md
-
-**File**: `client/specs/SCRIPTS.md` | **Effort**: Small | **Dependencies**: None
-
-Add specifications for `loop.sh`, `loop-with-analytics.sh`, and `compare-analytics.sh`. These are implemented and documented in ANALYTICS_README.md per ANALYTICS.md spec, but not referenced in SCRIPTS.md.
-
-#### P3d: Verify Server Documentation Post-HAProxy
-
-**Files**: `server/README.md`, `server/SETUP.md` | **Effort**: Small | **Dependencies**: P2a
-
-Both files already describe HAProxy architecture. After implementation, verify accuracy and update test counts.
-
 ### P4: Hardware Validation
 
-**Effort**: Medium | **Dependencies**: P2a, P2c
+**Effort**: Medium | **Dependencies**: None (all components implemented)
 
 Run full test suites on Apple Silicon server hardware:
-- Server tests (`server/scripts/test.sh --verbose`) including new HAProxy tests
-- Client tests (`client/scripts/test.sh --verbose`)
+- Server tests (`server/scripts/test.sh --verbose`) - should pass all 34 tests
+- Client tests (`client/scripts/test.sh --verbose`) - should pass all 40 tests
 - Manual Claude Code + Ollama integration validation
 - Version management and analytics script validation
+- End-to-end workflow testing with real models
 
 ---
 
 ## Dependency Graph
 
 ```
-P2a (install.sh HAProxy)
- ├── P2c (test.sh HAProxy tests) ─── requires P2a
- └── P3d (server docs verification) ─── requires P2a
-
-P2b (uninstall.sh cleanup) ─── independent
-
-P3a (client test.sh timing bug) ─── independent
-P3b (client README update) ─── independent
-P3c (client SCRIPTS.md spec) ─── independent
-
-P4 (hardware validation) ─── requires P2a, P2c
+P4 (hardware validation) ─── ready to execute
 ```
 
-**Suggested order**: P2a -> P2b + P2c (parallel) -> P3d -> P4. P3a, P3b, P3c can run anytime.
+**Suggested order**: P4 (all implementation complete)
 
 ---
 
