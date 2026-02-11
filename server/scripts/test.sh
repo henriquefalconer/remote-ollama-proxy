@@ -222,9 +222,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -232,7 +235,9 @@ else
         info "Elapsed time: ${ELAPSED_MS}ms"
     fi
 
-    if [[ "$CHAT_RESPONSE" != "FAILED" ]] && echo "$CHAT_RESPONSE" | jq -e '.choices[0].message.content' &> /dev/null; then
+    # Extract JSON from verbose output (last line is the actual response)
+    JSON_ONLY=$(echo "$CHAT_RESPONSE" | tail -n 1)
+    if [[ "$CHAT_RESPONSE" != "FAILED" ]] && echo "$JSON_ONLY" | jq -e '.choices[0].message.content' &> /dev/null; then
         pass "POST /v1/chat/completions (non-streaming) succeeded"
     else
         fail "POST /v1/chat/completions (non-streaming) failed"
@@ -266,9 +271,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -310,9 +318,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -370,9 +381,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -380,8 +394,10 @@ else
         info "Elapsed time: ${ELAPSED_MS}ms"
     fi
 
-    if [[ "$JSON_RESPONSE" != "FAILED" ]] && echo "$JSON_RESPONSE" | jq -e '.choices[0].message.content' &> /dev/null; then
-        CONTENT=$(echo "$JSON_RESPONSE" | jq -r '.choices[0].message.content')
+    # Extract JSON from verbose output (last line is the actual response)
+    JSON_ONLY=$(echo "$JSON_RESPONSE" | tail -n 1)
+    if [[ "$JSON_RESPONSE" != "FAILED" ]] && echo "$JSON_ONLY" | jq -e '.choices[0].message.content' &> /dev/null; then
+        CONTENT=$(echo "$JSON_ONLY" | jq -r '.choices[0].message.content')
         if echo "$CONTENT" | jq -e '.' &> /dev/null; then
             pass "POST /v1/chat/completions (JSON mode) returns valid JSON"
         else
@@ -419,9 +435,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -429,8 +448,10 @@ else
         info "Elapsed time: ${ELAPSED_MS}ms"
     fi
 
+    # Extract JSON from verbose output (last line is the actual response)
+    JSON_ONLY=$(echo "$RESPONSES_RESPONSE" | tail -n 1)
     if [[ "$RESPONSES_RESPONSE" != "FAILED" ]]; then
-        if echo "$RESPONSES_RESPONSE" | jq -e '.' &> /dev/null; then
+        if echo "$JSON_ONLY" | jq -e '.' &> /dev/null; then
             pass "POST /v1/responses succeeded (Ollama 0.5.0+)"
         else
             skip "POST /v1/responses - endpoint exists but returned non-JSON (may not be supported)" "Upgrade to Ollama 0.5.0+"
@@ -489,9 +510,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -499,8 +523,10 @@ else
         info "Elapsed time: ${ELAPSED_MS}ms"
     fi
 
-    if [[ "$ANTHROPIC_RESPONSE" != "FAILED" ]] && echo "$ANTHROPIC_RESPONSE" | jq -e '.type == "message"' &> /dev/null; then
-        if echo "$ANTHROPIC_RESPONSE" | jq -e '.content[0].text' &> /dev/null; then
+    # Extract JSON from verbose output (last line is the actual response)
+    JSON_ONLY=$(echo "$ANTHROPIC_RESPONSE" | tail -n 1)
+    if [[ "$ANTHROPIC_RESPONSE" != "FAILED" ]] && echo "$JSON_ONLY" | jq -e '.type == "message"' &> /dev/null; then
+        if echo "$JSON_ONLY" | jq -e '.content[0].text' &> /dev/null; then
             pass "POST /v1/messages (non-streaming) succeeded (Ollama 0.5.0+)"
         else
             fail "POST /v1/messages response missing content.text field"
@@ -539,9 +565,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -590,9 +619,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -600,7 +632,9 @@ else
         info "Elapsed time: ${ELAPSED_MS}ms"
     fi
 
-    if [[ "$ANTHROPIC_SYSTEM" != "FAILED" ]] && echo "$ANTHROPIC_SYSTEM" | jq -e '.type == "message"' &> /dev/null; then
+    # Extract JSON from verbose output (last line is the actual response)
+    JSON_ONLY=$(echo "$ANTHROPIC_SYSTEM" | tail -n 1)
+    if [[ "$ANTHROPIC_SYSTEM" != "FAILED" ]] && echo "$JSON_ONLY" | jq -e '.type == "message"' &> /dev/null; then
         pass "POST /v1/messages (system prompt) succeeded"
     else
         skip "POST /v1/messages (system prompt) - endpoint not available" "Upgrade to Ollama 0.5.0+"
@@ -664,9 +698,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 
@@ -674,7 +711,9 @@ else
         info "Elapsed time: ${ELAPSED_MS}ms"
     fi
 
-    if [[ "$ANTHROPIC_MULTITURN" != "FAILED" ]] && echo "$ANTHROPIC_MULTITURN" | jq -e '.type == "message"' &> /dev/null; then
+    # Extract JSON from verbose output (last line is the actual response)
+    JSON_ONLY=$(echo "$ANTHROPIC_MULTITURN" | tail -n 1)
+    if [[ "$ANTHROPIC_MULTITURN" != "FAILED" ]] && echo "$JSON_ONLY" | jq -e '.type == "message"' &> /dev/null; then
         pass "POST /v1/messages (multi-turn conversation) succeeded"
     else
         skip "POST /v1/messages (multi-turn) - endpoint not available" "Upgrade to Ollama 0.5.0+"
@@ -709,9 +748,12 @@ else
     fi
 
     END_TIME=$(date +%s%N 2>/dev/null || date +%s)
-    if [[ "$START_TIME" =~ N ]]; then
+    # Detect if nanoseconds are supported by checking if we got a large number (>12 digits)
+    if [[ ${#START_TIME} -gt 12 ]]; then
+        # Nanoseconds (19 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     else
+        # Seconds (10 digits) - convert to milliseconds
         ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
     fi
 

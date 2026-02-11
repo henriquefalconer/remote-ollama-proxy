@@ -5,10 +5,10 @@
 
 # Implementation Plan
 
-**Last Updated**: 2026-02-10
-**Current Version**: v0.0.17
+**Last Updated**: 2026-02-11
+**Current Version**: v0.0.18
 
-v1 (Aider/OpenAI API) is complete and tested on hardware. v2+ (Claude Code/Anthropic API, version management, analytics) has documentation foundations done; core implementation in progress. Latest: server Anthropic tests + progress tracking implemented; client Claude Code installation with optional Ollama integration complete; version management complete (compatibility check, version pinning, downgrade script); client uninstall v2+ cleanup complete; analytics bug fixes complete (H3-1); client v2+ tests added (H2-5); analytics decision matrix implemented (H3-6); client SETUP.md updated with v2+ documentation (H3-5); server README.md updated with v2+ test documentation (H3-3); H4-3 verified auto-resolved. **Phase 2 complete (6/6 items). Phase 3 complete (3/3 items). Phase 4: 6 done, 1 remaining (H3-2 hardware testing)**.
+v1 (Aider/OpenAI API) is complete and tested on hardware. v2+ (Claude Code/Anthropic API, version management, analytics) has documentation foundations done; core implementation in progress. Latest: server test script bugs fixed (timing calculation + Anthropic endpoint detection) based on hardware test results; server Anthropic tests + progress tracking implemented; client Claude Code installation with optional Ollama integration complete; version management complete (compatibility check, version pinning, downgrade script); client uninstall v2+ cleanup complete; analytics bug fixes complete (H3-1); client v2+ tests added (H2-5); analytics decision matrix implemented (H3-6); client SETUP.md updated with v2+ documentation (H3-5); server README.md updated with v2+ test documentation (H3-3); H4-3 verified auto-resolved. **Phase 2 complete (6/6 items). Phase 3 complete (3/3 items). Phase 4: 7 done, 1 remaining (H3-2 hardware testing re-run)**.
 
 ---
 
@@ -38,7 +38,9 @@ All Phase 3 items completed: H2-3 (downgrade script), H2-4 (uninstall v2+ cleanu
 
 | ID | Task | Priority | Effort | Target Files | Dependencies |
 |----|------|----------|--------|-------------|-------------|
-| H3-2 | Hardware testing: run all tests with `--verbose` on Apple Silicon server, manual Claude Code + Ollama validation, version management script testing. | H3 | Large | Manual | All H1 + H2 items (ALL DONE) |
+| H3-2 | Hardware testing RE-RUN: run all tests with `--verbose` on Apple Silicon server (with fixed test script), manual Claude Code + Ollama validation, version management script testing. | H3 | Medium | Manual | All H1 + H2 items + H3-2a (ALL DONE) |
+
+**Note**: Initial hardware test run revealed 2 bugs in test script (fixed in H3-2a). Expected results after re-run: 25 passed, 0 failed, 1 skipped (Test 11 /v1/responses may skip on older Ollama).
 
 **Completed from Phase 4**:
 - ✓ H3-1 - Analytics bug fixes (divide-by-zero errors, cache hit rate formula)
@@ -47,6 +49,7 @@ All Phase 3 items completed: H2-3 (downgrade script), H2-4 (uninstall v2+ cleanu
 - ✓ H3-5 - Client SETUP.md updated with v2+ documentation
 - ✓ H3-3 - Server README.md updated with v2+ test documentation (completed WITHOUT requiring H3-2)
 - ✓ H4-3 - Auto-resolved (verified: check-compatibility.sh exists, ANALYTICS_README.md reference is correct)
+- ✓ H3-2a - Server test script bug fixes discovered from hardware testing (timing calculation + Anthropic endpoint detection)
 
 ---
 
@@ -370,13 +373,104 @@ Phase 4 (validation and polish):
   - `${VAR:-0}`: Final safety net for empty strings or unset variables
 - **Testing**: All three scripts now handle zero-match cases gracefully without syntax errors in arithmetic operations
 
+### H3-2a: Server Test Script Bug Fixes (Hardware Testing)
+**Date**: 2026-02-11
+**File**: `server/scripts/test.sh`
+**Trigger**: Initial hardware test run revealed 2 critical bugs causing false failures and false skips
+
+#### Bug 1: Timing Calculation Error
+- **Problem**: Elapsed times displayed as absurdly large values (e.g., 369,523,000 seconds = 4,277 days)
+- **Root cause**: Incorrect nanosecond/second detection logic
+  ```bash
+  # OLD (BROKEN):
+  if [[ "$START_TIME" =~ N ]]; then
+      ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
+  else
+      ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
+  fi
+  ```
+  The condition `=~ N` checks if string contains "N":
+  - When `date +%s%N` succeeds: returns nanoseconds (no "N") → multiplies by 1000 ❌
+  - When `date +%s%N` fails: returns literal "1234567890N" → divides by 1000000 ❌
+  - **Both branches were wrong!**
+- **Fix**: Check timestamp length instead of string pattern
+  ```bash
+  # NEW (FIXED):
+  if [[ ${#START_TIME} -gt 12 ]]; then
+      # Nanoseconds (19 digits) - convert to milliseconds
+      ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
+  else
+      # Seconds (10 digits) - convert to milliseconds
+      ELAPSED_MS=$(( (END_TIME - START_TIME) * 1000 ))
+  fi
+  ```
+- **Tests fixed**: 10 timing checks (Tests 7, 8, 9, 10, 11, 21, 22, 23, 25, 26)
+- **Impact**: Test 7 and Test 10 were FALSE FAILURES (APIs worked, but timing bug caused fail)
+
+#### Bug 2: Anthropic Endpoint Detection Error
+- **Problem**: Tests 12, 14, 16 marked as "SKIP - endpoint not available" despite receiving valid HTTP 200 responses
+- **Root cause**: In verbose mode, `curl -v ... 2>&1` mixes debug output with JSON response, causing `jq` parsing to fail
+  ```bash
+  # Verbose output contains both curl headers AND JSON:
+  > POST /v1/messages HTTP/1.1
+  > Host: localhost:11434
+  ...
+  {"id":"msg_...","type":"message",...}
+
+  # jq cannot parse this mixed output
+  ```
+- **Fix**: Extract JSON from verbose output before parsing
+  ```bash
+  # Extract last line (actual JSON response) before parsing
+  JSON_ONLY=$(echo "$ANTHROPIC_RESPONSE" | tail -n 1)
+  if echo "$JSON_ONLY" | jq -e '.type == "message"' &> /dev/null; then
+  ```
+- **Tests fixed**: 6 JSON parsing checks (Tests 7, 10, 11, 21, 23, 25)
+- **Impact**: Tests 12, 14, 16 were FALSE SKIPS (endpoints actually work)
+
+#### Hardware Test Results Analysis
+- **Before fix**: 20 passed, 2 failed, 4 skipped
+  - Test 7 (non-streaming): FAIL (timing bug)
+  - Test 10 (JSON mode): FAIL (timing bug)
+  - Test 12 (Anthropic non-streaming): SKIP (detection bug)
+  - Test 14 (Anthropic system prompt): SKIP (detection bug)
+  - Test 16 (Anthropic multi-turn): SKIP (detection bug)
+  - Test 11 (/v1/responses): SKIP (legitimate - experimental endpoint)
+- **After fix (expected)**: 25 passed, 0 failed, 1 skipped
+  - Tests 7, 10: Now PASS with correct timing (~1-2 seconds)
+  - Tests 12, 14, 16: Now PASS (Anthropic endpoints confirmed working)
+  - Test 11: Still SKIP (acceptable - experimental endpoint)
+
+#### Files Modified
+- Total: 16 bug fixes across 11 tests
+  - 10 timing calculation fixes
+  - 6 JSON extraction fixes (verbose mode parsing)
+
 **Impact**: Client installation now supports optional Claude Code integration with proper user consent, clear messaging, idempotent alias creation, and accurate env template documentation. Server test suite comprehensively validates both OpenAI and Anthropic API surfaces with proper progress tracking. Complete version management workflow: users can check compatibility, pin working versions, and downgrade to known-good configurations when upgrades break compatibility. Client uninstallation now properly cleans up both v1 environment sourcing and v2+ Claude Code aliases from shell profiles. Analytics scripts are now robust against divide-by-zero errors and correctly calculate cache hit rates per specification. Client test suite validates all v2+ functionality with 12 new tests and flexible filtering flags. Analytics decision matrix provides actionable guidance on operation balance with shallow:deep ratio tracking. Client SETUP.md now comprehensively documents the complete v2+ user experience including installation, usage, version management, analytics workflow, and troubleshooting. Server README.md now accurately reflects v2+ test suite with 26 tests and Anthropic API coverage documentation. All test and analytics scripts now correctly handle grep -c edge cases without arithmetic syntax errors.
 
 ---
 
-## Lessons Learned (v0.0.4)
+## Lessons Learned
 
-All 48 automated tests passed, but first real Aider usage failed. Root cause: `OLLAMA_API_BASE` included `/v1` suffix, breaking Ollama native endpoints (`/api/*`). Fix: separate `OLLAMA_API_BASE` (no suffix) from `OPENAI_API_BASE` (with `/v1`). Lesson: end-to-end integration tests with actual tools are mandatory.
+### v0.0.4: OLLAMA_API_BASE Bug
+All 48 automated tests passed, but first real Aider usage failed. Root cause: `OLLAMA_API_BASE` included `/v1` suffix, breaking Ollama native endpoints (`/api/*`). Fix: separate `OLLAMA_API_BASE` (no suffix) from `OPENAI_API_BASE` (with `/v1`).
+
+**Lesson**: End-to-end integration tests with actual tools are mandatory.
+
+### v0.0.18: Test Script Bugs Revealed by Hardware Testing
+Initial hardware test run showed 2 failed, 4 skipped - but analysis revealed these were FALSE failures/skips due to test script bugs, not actual API failures. Both Anthropic endpoints were actually working correctly.
+
+**Root causes**:
+1. **Timing bug**: Nanosecond detection logic was inverted (checking for "N" in string instead of numeric length)
+2. **Verbose mode bug**: JSON parsing failed because curl debug output was mixed with response body
+
+**Lesson**: When hardware tests show unexpected failures:
+1. **Examine the actual API responses** - don't trust test verdicts blindly
+2. **Look at the raw output** - verbose mode revealed both APIs returned HTTP 200 with valid JSON
+3. **Check test infrastructure first** - the problem was in measurement, not the code being measured
+4. **Validate assumptions** - timing detection logic had been wrong all along, just never tested on system with nanosecond support
+
+**Impact**: What looked like "hardware test failures" were actually bugs in the test harness itself. After fixes, expected results: 25/26 tests passing (96% success rate, up from apparent 77%).
 
 ---
 
