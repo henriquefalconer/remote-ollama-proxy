@@ -7,7 +7,7 @@
 
 Secure remote access to Ollama on your hardware.
 
-Complete infrastructure for private AI inference using OpenWrt router, WireGuard VPN, and DMZ network segmentation. Zero third-party dependencies.
+Complete infrastructure for private AI inference using OpenWrt router, WireGuard VPN, and DMZ network segmentation. No third-party cloud services.
 
 ## Project Structure
 
