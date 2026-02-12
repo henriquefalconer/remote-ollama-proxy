@@ -81,8 +81,8 @@ else
     echo "Ensure server is running and accessible"
     echo "Check:"
     echo "  • Server is online: ssh server 'ollama serve'"
-    echo "  • Tailscale is connected: tailscale status"
-    echo "  • Server hostname is correct in ~/.ai-client/env"
+    echo "  • WireGuard VPN is connected: wg show"
+    echo "  • Server IP is correct in ~/.ai-client/env"
     echo ""
     exit 1
 fi

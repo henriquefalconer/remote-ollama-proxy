@@ -188,7 +188,7 @@ claude-ollama --model qwen3-coder  # Uses local Ollama (requires VPN)
 ### Differences from Real Anthropic API
 
 **Behavior differences:**
-- API key accepted but not validated (Tailscale provides security)
+- API key accepted but not validated (WireGuard VPN provides security)
 - `anthropic-version` header accepted but not used
 - Token counts are approximations based on underlying model's tokenizer
 - Model quality significantly lower (qwen3-coder, glm-4.7 vs Opus/Sonnet)

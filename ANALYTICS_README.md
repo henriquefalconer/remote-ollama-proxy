@@ -140,7 +140,7 @@ Key Insights:
 ./loop-with-analytics.sh plan 1 -g "test feature"
 
 # Run with Ollama (after setup)
-ANTHROPIC_BASE_URL=http://ai-server:11434 \
+ANTHROPIC_BASE_URL=http://192.168.100.10:11434 \
 ./loop-with-analytics.sh plan 1 -g "test feature"
 
 # Compare performance
@@ -193,7 +193,7 @@ ANTHROPIC_BASE_URL=http://ai-server:11434 \
 **Setup**:
 ```bash
 # Create claude-ollama alias (see client install.sh)
-alias claude-ollama='ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="" ANTHROPIC_BASE_URL=http://ai-server:11434 claude --dangerously-skip-permissions'
+alias claude-ollama='ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="" ANTHROPIC_BASE_URL=http://192.168.100.10:11434 claude --dangerously-skip-permissions'
 
 # Modify loop-with-analytics.sh line 277 to use claude-ollama
 ```

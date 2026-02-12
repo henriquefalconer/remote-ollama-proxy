@@ -579,12 +579,11 @@ When evaluating future hardening options:
    - Can it be rolled back easily?
 
 4. **What's the baseline alternative?**
-   - Network isolation (Tailscale) already in place
-   - Endpoint allowlisting already in place
-   - Loopback binding already in place
+   - Network isolation (WireGuard VPN + DMZ) already in place
+   - Firewall rules (port-level filtering) already in place
 
 5. **Is there a simpler solution?**
-   - Tighter Tailscale ACLs
+   - Tighter OpenWrt firewall rules or per-peer WireGuard configuration
    - Better monitoring (detect vs prevent)
    - Operational procedure (not technical control)
 

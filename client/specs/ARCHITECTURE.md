@@ -72,6 +72,6 @@
 - Any code that makes direct HTTP calls
 - Linux/Windows installers
 - IDE plugins
-- Custom auth beyond Tailscale + dummy API key
+- Custom auth beyond WireGuard VPN + dummy API key
 - Built-in model serving (server responsibility)
 - Load balancing across multiple Ollama servers (would require separate orchestration layer)

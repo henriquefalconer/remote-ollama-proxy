@@ -74,7 +74,7 @@
 
 - Guarantee that after `./scripts/install.sh`, the environment matches API_CONTRACT.md exactly
 - Verify connectivity to remote Ollama server (optional test curl in installer)
-- Provide clear error messages if Tailscale is not joined or tag is missing
+- Provide clear error messages if WireGuard VPN is not connected or configured
 
 ### Extended
 
@@ -90,7 +90,7 @@
 ✅ **Good for:**
 - Interactive single-session coding (no parallelism)
 - Quick file edits and refactoring
-- Privacy-critical work (stays on private Tailscale network)
+- Privacy-critical work (stays on private WireGuard VPN network)
 - Simple reconnaissance tasks (file reads, greps)
 - Build mode (Sonnet) for simple tasks only (after testing)
 
