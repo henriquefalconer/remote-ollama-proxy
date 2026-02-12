@@ -18,7 +18,7 @@ This monorepo contains two main components:
 
 ## Overview
 
-The self-sovereign-ollama project provides a complete solution for running Ollama on your own hardware with secure remote access via self-hosted WireGuard VPN, zero public internet exposure.
+The self-sovereign-ollama project provides a complete solution for running Ollama on your own hardware with secure remote access via self-hosted WireGuard VPN, and zero public internet exposure.
 
 ### Server (ai-server)
 - Runs Ollama on a dedicated Apple Silicon Mac with high unified memory
