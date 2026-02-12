@@ -9,228 +9,123 @@
 
 ---
 
+## Completed Work (v1.1.2)
+
+### P0: Specification Cleanup ✅ COMPLETE
+- All 18 specification files made v2-compliant (removed v1 contradictions)
+- All 5 documentation files made v2-compliant (READMEs, SETUP guides, ROUTER_SETUP.md)
+- v1 references retained only as historical context
+
+### P1: Server Scripts ✅ COMPLETE (2026-02-12)
+**Spec authority**: `server/specs/SCRIPTS.md`
+
+- **install.sh**: Complete rewrite. 752→426 lines (43% reduction). Removed Tailscale and HAProxy. Added DMZ network configuration, static IP setup, interface detection, binding choice (DMZ-only vs all interfaces), router connectivity validation.
+- **uninstall.sh**: v2-compliant. Removed HAProxy cleanup. Added optional static IP→DHCP revert and router config cleanup reminders.
+- **test.sh**: v2-compliant. 29 tests (down from 36). Removed loopback/localhost/Tailscale/HAProxy tests. Added DMZ IP connectivity, router gateway, DNS resolution, internet connectivity, LAN isolation verification.
+- **warm-models.sh**: v2-compliant. Added dynamic host detection (`detect_ollama_host()` function) to work with DMZ IP binding.
+
+### P2: Client Scripts ✅ COMPLETE (2026-02-12)
+**Spec authority**: `client/specs/SCRIPTS.md`
+
+- **install.sh**: Tailscale→WireGuard migration. 617→643 lines. Added WireGuard tools install, keypair generation, config file creation, VPN server prompts, connection instructions. Updated env template with static DMZ IP.
+- **uninstall.sh**: v2-compliant. Added WireGuard config display, optional tools cleanup, router admin reminder with public key.
+- **test.sh**: v2-compliant. All 40 tests updated. Changed Tailscale checks to WireGuard interface validation.
+
+### Supporting Components ✅ COMPLETE
+- **Root Analytics** (3 scripts): `loop.sh`, `loop-with-analytics.sh`, `compare-analytics.sh` — all v2-compliant
+- **Client Version Management** (3 scripts): `check-compatibility.sh`, `pin-versions.sh`, `downgrade-claude.sh` — all v2-compliant
+- **Client Config**: `env.template` — static DMZ IP `192.168.100.10`, correct environment variables
+
+---
+
 ## Current Status
 
 | Component | v2 Compliance | Notes |
 |-----------|:------------:|-------|
 | **Specs** (18 files) | 100% | All v2-compliant. v1 mentions are historical context only. |
 | **Documentation** (5 files) | 100% | READMEs, SETUP guides, ROUTER_SETUP.md — all v2-compliant. |
-| **Root Analytics** (3 scripts) | 100% | `loop.sh`, `loop-with-analytics.sh`, `compare-analytics.sh`. |
-| **Client Version Mgmt** (3 scripts) | 100% | `check-compatibility.sh`, `pin-versions.sh`, `downgrade-claude.sh`. |
-| **Client Config** | 100% | `env.template` — uses static DMZ IP `192.168.100.10`, correct env vars. |
-| **Server Scripts** (4 files) | 100% | All 4 complete (install.sh, uninstall.sh, warm-models.sh, test.sh). ✅ |
-| **Client Scripts** (3 files) | 100% | All 3 complete (install.sh, test.sh, uninstall.sh). ✅ |
+| **Server Scripts** (4 files) | 100% | install.sh, uninstall.sh, warm-models.sh, test.sh |
+| **Client Scripts** (3 files) | 100% | install.sh, test.sh, uninstall.sh |
+| **Root Analytics** (3 scripts) | 100% | loop.sh, loop-with-analytics.sh, compare-analytics.sh |
+| **Client Version Mgmt** (3 scripts) | 100% | check-compatibility.sh, pin-versions.sh, downgrade-claude.sh |
+| **Client Config** | 100% | env.template |
 
 **Target Architecture** (v2):
 ```
 Client → WireGuard VPN (OpenWrt Router) → Firewall → Ollama (192.168.100.10:11434)
 ```
 
+**Key Changes from v1**:
+- Removed: Tailscale VPN, HAProxy reverse proxy, loopback binding
+- Added: WireGuard VPN, direct DMZ network access, OpenWrt router firewall
+- Security model: Two-layer (Network Perimeter + AI Server), DMZ isolation
+
 ---
 
 ## Dependency Graph
 
 ```
-P1 (server scripts) ─── can start immediately
-P2 (client scripts) ─── can start immediately (independent of P1)
+P1 (server scripts) ─── COMPLETE ✅
+P2 (client scripts) ─── COMPLETE ✅
         │
-P3 (hardware validation) ─── depends on P1 + P2
+        ↓
+P3 (hardware validation) ─── BLOCKED (awaiting hardware deployment)
 ```
 
-P1 and P2 share no code and communicate only via `client/specs/API_CONTRACT.md`.
+P1 and P2 share no code and communicate only via `client/specs/API_CONTRACT.md`
 
 ---
 
-## P1: Server Scripts — v2 Migration ✅ COMPLETE
+## P3: Hardware Validation (REMAINING WORK)
 
-**Status**: All 4 server scripts migrated to v2 architecture (2026-02-12)
+**Status**: BLOCKED — awaiting hardware deployment
+**Dependencies**: P1 + P2 complete ✅
+**Location**: Apple Silicon Mac mini + OpenWrt router
 
-**Spec authority**: `server/specs/SCRIPTS.md`
+### Validation Checklist
 
-### P1a: `server/scripts/install.sh` — v2 migration ✅ COMPLETE
-
-**Status**: Completed 2026-02-12
-
-**Removed (~480 lines):**
-- ✅ Tailscale install/connect workflow (lines 95-227, ~133 lines)
-- ✅ HAProxy install/config (lines 352-624, ~273 lines)
-- ✅ Tailscale ACL instructions (lines 626-698, ~73 lines)
-- ✅ v1 final summary (lines 700-751)
-- ✅ `OLLAMA_HOST=127.0.0.1` loopback binding
-
-**Preserved (~300 lines with modifications):**
-- ✅ Helpers, color output, banner
-- ✅ System validation: macOS 14+, Apple Silicon, shell, Homebrew
-- ✅ Ollama install via Homebrew
-- ✅ Stop existing services
-- ✅ LaunchAgent plist creation and loading — updated to use DMZ IP or 0.0.0.0
-- ✅ Service verification retry loop — updated to use SERVER_IP
-- ✅ Process ownership check
-- ✅ Self-test API call — updated to use SERVER_IP
-
-**Added (~250 lines):**
-- ✅ Router setup prerequisite prompt (reference `ROUTER_SETUP.md`)
-- ✅ DMZ network config prompts (subnet default `192.168.100.0/24`, IP default `192.168.100.10`)
-- ✅ IP format and subnet membership validation
-- ✅ Static IP config via `sudo networksetup -setmanual "Ethernet" ...`
-- ✅ Interface detection via `networksetup -listallhardwareports`
-- ✅ DNS config (router primary, public backup)
-- ✅ Binding choice prompt: DMZ-only vs all interfaces
-- ✅ Plist `OLLAMA_HOST` set to `$SERVER_IP` or `0.0.0.0`
-- ✅ Binding verification via `lsof -i :11434`
-- ✅ Router connectivity test via `ping -c 3 $GATEWAY`
-- ✅ Optional model pre-pull prompt
-- ✅ v2 final summary (DMZ IP, auto-start, router connectivity, troubleshooting)
-
-**Result**: 752 lines → 426 lines (43% reduction, 326 lines removed)
-
-### P1b: `server/scripts/uninstall.sh` — v2 migration ✅ COMPLETE
-
-**Status**: Completed 2026-02-12
-
-**Removed:**
-- ✅ Entire HAProxy cleanup section (lines 92-156, ~64 lines)
-- ✅ v1 references from preserved items list (Tailscale, HAProxy)
-- ✅ Tailscale/HAProxy uninstall instructions (lines 200-206)
-
-**Preserved:**
-- ✅ Ollama service stop, plist removal, log cleanup, model preservation
-- ✅ Core uninstall flow and user confirmation prompts
-
-**Added:**
-- ✅ Optional static IP → DHCP revert prompt with `networksetup -setdhcp` command
-- ✅ Router config cleanup reminder (remove WireGuard peer, DMZ rules; reference `ROUTER_SETUP.md`)
-- ✅ Updated "Left untouched" list to include network/router configuration notes
-
-### P1c: `server/scripts/test.sh` — v2 migration ✅ COMPLETE
-
-**Status**: Completed 2026-02-12
-
-**Removed:**
-- ✅ Test 18: loopback binding check expecting `127.0.0.1` (lines 853-872)
-- ✅ Test 19: localhost access test (lines 874-880)
-- ✅ Test 20: Tailscale IP access test (lines 882-897)
-- ✅ Tests 21-30: entire HAProxy test section (lines 900-1058, ~159 lines)
-
-**Fixed:**
-- ✅ Test numbering conflict: Anthropic tests 21-26 overlapping with HAProxy tests 21-30 — resolved by removing HAProxy tests
-- ✅ `TOTAL_TESTS` updated from 36 to 29 (7 tests removed)
-
-**Modified:**
-- ✅ Test 17: `OLLAMA_HOST` plist check now accepts `192.168.100.10` or `0.0.0.0` (not `127.0.0.1`)
-- ✅ All API test URLs changed from `localhost` to `${OLLAMA_HOST}` (auto-detected from plist)
-- ✅ "What's Next" section updated to reference `ROUTER_SETUP.md`/WireGuard
-
-**Added:**
-- ✅ `detect_ollama_host()` function: auto-detect from env var → plist → fallback to `localhost`
-- ✅ Test 18: Binding verification (`lsof -i :11434` shows DMZ IP or `0.0.0.0`)
-- ✅ Test 19: DMZ IP connectivity test (`curl http://${OLLAMA_HOST}:11434/v1/models`)
-- ✅ Test 20: Router gateway connectivity (`ping -c 3 192.168.100.1`)
-- ✅ Test 21: DNS resolution (`nslookup google.com`)
-- ✅ Test 22: Internet connectivity (`curl -I https://www.google.com`)
-- ✅ Test 23: LAN isolation verification (ping `192.168.1.1` — should fail, confirms DMZ security posture)
-
-### P1d: `server/scripts/warm-models.sh` — localhost fix ✅ COMPLETE
-
-**Status**: Completed 2026-02-12
-
-**Implemented:**
-- ✅ Added `detect_ollama_host()` function: checks `OLLAMA_HOST` env → parses plist → fallback to `localhost`
-- ✅ Replaced `localhost:11434` with `${OLLAMA_HOST}:11434` in both curl commands (lines 56, 95)
-- ✅ Updated error messages to reference dynamic host detection
-
----
-
-## P2: Client Scripts — Tailscale → WireGuard
-
-**Spec authority**: `client/specs/SCRIPTS.md`
-
-### P2a: `client/scripts/install.sh` — Tailscale → WireGuard ✅ COMPLETE
-
-**Status**: Completed 2026-02-12
-
-**Removed:**
-- ✅ Entire Tailscale section: GUI check, install, connection flow, IP detection (lines 152-280, ~129 lines)
-
-**Preserved (with modifications):**
-- ✅ System validation, Homebrew, Python install (lines 1-150)
-- ✅ Config directory creation
-- ✅ Env file generation — updated to use `$SERVER_IP` placeholder, added VPN requirement comment
-- ✅ Shell profile modification
-- ✅ pipx + Aider installation
-- ✅ Claude Code alias — updated to use `$SERVER_IP`, added VPN requirement comment
-- ✅ Uninstall script copy
-- ✅ Connectivity test — updated URL to use `$SERVER_IP`, VPN-specific error messages
-- ✅ Final summary structure — updated messaging with VPN instructions
-
-**Added:**
-- ✅ WireGuard install: `brew install wireguard-tools` with error handling
-- ✅ Keypair generation: `wg genkey | tee privatekey | wg pubkey > publickey`
-- ✅ Key storage in `~/.ai-client/wireguard/` with `chmod 600` on private key
-- ✅ Public key display with instructions to send to router admin (twice: after generation and in final summary)
-- ✅ Server IP prompt (default `192.168.100.10`) with IP format validation
-- ✅ VPN server pubkey/endpoint prompts with validation
-- ✅ WireGuard config file generation (`~/.ai-client/wireguard/wg0.conf`) with proper permissions
-- ✅ Import instructions for WireGuard app or `wg-quick`
-- ✅ VPN connection confirmation before connectivity test
-- ✅ Updated final summary: display pubkey, remind to send to admin, VPN management commands, troubleshooting tips
-
-### P2b: `client/scripts/uninstall.sh` — Tailscale → WireGuard ✅ COMPLETE
-
-**Status**: Completed 2026-02-12
-
-**Changed:**
-- ✅ Line 6: "Leaves Tailscale" → "Leaves WireGuard"
-- ✅ Line 142: `echo "  - Tailscale"` → conditional WireGuard display if config exists
-
-**Added:**
-- ✅ Public key display (from `~/.ai-client/wireguard/publickey`) before directory deletion
-- ✅ WireGuard tools cleanup section with optional `brew uninstall wireguard-tools` prompt
-- ✅ Router admin reminder to remove VPN peer with displayed public key
-- ✅ Updated "Left untouched" list to reflect WireGuard instead of Tailscale
-
-### P2c: `client/scripts/test.sh` — Tailscale → WireGuard ✅ COMPLETE
-
-**Status**: Completed 2026-02-12
-
-**Changed:**
-- ✅ Test 8 (lines 248-254): `command -v tailscale` → `command -v wg` or `brew list wireguard-tools`
-- ✅ Test 9 (lines 256-267): `tailscale status`/`tailscale ip -4` → WireGuard interface check (`wg show` or active `utun`)
-- ✅ Test 14 comment (line 333): "Tailscale connectivity" → "VPN connectivity"
-- ✅ Error messages (lines 641, 1413): "Tailscale" → "WireGuard VPN"/"VPN"
-
-**Preserved:**
-- ✅ All 40 tests: env config (1-7), dependencies (10-13), connectivity (14-19), API contract (20-22), Aider (23-26), script behavior (27-28), Claude Code (29-35), version management (36-40)
-- ✅ Test harness structure, color-coded output, verbose mode, timing logic
-
----
-
-## P3: Hardware Validation
-
-**Dependencies**: P1 + P2 complete
-**Location**: Apple Silicon hardware + OpenWrt router
-
+#### Server Installation
 - [ ] `server/scripts/install.sh` completes without errors on target hardware
-- [ ] `server/scripts/test.sh --verbose` — all automated tests pass
+- [ ] DMZ network configuration (static IP 192.168.100.10, gateway 192.168.100.1)
+- [ ] Ollama service starts successfully and binds to DMZ IP or 0.0.0.0
+- [ ] `server/scripts/test.sh --verbose` — all 29 automated tests pass
 - [ ] `server/scripts/uninstall.sh` cleanly removes configuration
+
+#### Client Installation
 - [ ] `client/scripts/install.sh` completes without errors
-- [ ] `client/scripts/test.sh --verbose` — all automated tests pass
+- [ ] WireGuard keypair generation and config file creation
+- [ ] VPN connection established through OpenWrt router tunnel to server
+- [ ] `client/scripts/test.sh --verbose` — all 40 automated tests pass
 - [ ] `client/scripts/uninstall.sh` cleanly removes configuration
-- [ ] WireGuard VPN: client connects through router tunnel to server
-- [ ] DMZ isolation: server cannot reach LAN (`ping 192.168.1.x` fails)
-- [ ] End-to-end: Aider and Claude Code inference works via VPN
-- [ ] Version management: `check-compatibility.sh`, `pin-versions.sh`, `downgrade-claude.sh` work
+
+#### Network & Security
+- [ ] WireGuard VPN: client successfully connects to server via router
+- [ ] DMZ isolation: server cannot reach LAN (`ping 192.168.1.x` fails — expected)
+- [ ] Firewall rules: only client VPN traffic reaches server port 11434
+- [ ] DNS resolution works on both server and client
+
+#### End-to-End Functionality
+- [ ] Aider integration: inference works via OpenAI API (`/v1/chat/completions`)
+- [ ] Claude Code integration: inference works via Anthropic API (`/v1/messages`)
+- [ ] Model warm-up: `server/scripts/warm-models.sh` successfully pre-loads models
+- [ ] Version management: `check-compatibility.sh`, `pin-versions.sh`, `downgrade-claude.sh` work correctly
 - [ ] Analytics: `loop-with-analytics.sh` captures metrics
+
+#### Reliability
 - [ ] Idempotency: re-running install scripts on already-installed system succeeds cleanly
+- [ ] Service persistence: Ollama restarts automatically after reboot
+- [ ] Error recovery: scripts handle common failure modes gracefully
 
 ---
 
 ## Implementation Constraints
 
-1. **Specs are authoritative**: `server/specs/*.md` (9 files), `client/specs/*.md` (9 files). Scripts must match specs.
+All code development follows these principles:
+
+1. **Specs are authoritative**: `server/specs/*.md` (9 files), `client/specs/*.md` (9 files). Scripts must match specs exactly.
 2. **API contract**: `client/specs/API_CONTRACT.md` is the single source of truth for the server-client interface.
-3. **Security**: WireGuard VPN + OpenWrt firewall + DMZ isolation. No public exposure. No built-in auth.
+3. **Security model**: WireGuard VPN + OpenWrt firewall + DMZ isolation. No public exposure. No built-in authentication.
 4. **Idempotency**: All scripts must be safe to re-run without side effects.
-5. **No stubs**: Implement completely or not at all.
-6. **Claude Code integration is optional**: Always prompt for user consent on the client side.
-7. **curl-pipe install**: Client `install.sh` must work via `curl | bash`.
+5. **No stubs**: Implement features completely or not at all. No placeholder code.
+6. **User consent**: Claude Code integration is optional and requires explicit user opt-in.
+7. **curl-pipe install**: Client `install.sh` must work via `curl | bash` for easy remote deployment.
